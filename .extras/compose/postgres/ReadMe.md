@@ -113,7 +113,7 @@ Schema `buch` mit dem DB-User `buch` als _Owner_ angelegt:
       psql --dbname=postgres --username=postgres --file=/sql/create-db-buch.sql
       psql --dbname=buch --username=buch --file=/sql/create-schema-buch.sql
       psql --dbname=buch --username=buch --file=/sql/create-table.sql
-      psql --dbname=buch --username=postgres --file=/sql/copy-csv.sql
+      psql --dbname=fussballverein --username=postgres --file=/sql/copy-csv-fussballverein.sql
       exit
     docker compose down
 ```
