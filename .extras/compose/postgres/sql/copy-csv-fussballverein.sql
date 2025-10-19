@@ -20,6 +20,6 @@
 SET search_path TO fussballverein;
 
 -- https://www.postgresql.org/docs/current/sql-copy.html
-COPY fussballverein FROM '/csv/fussballverein.csv' (FORMAT csv, DELIMITER ';', HEADER true);
+COPY fussballverein (id, name, gruendungsdatum, website, email, telefonnummer, mitgliederanzahl, erzeugt, aktualisiert, version) FROM '/csv/fussballverein.csv' (FORMAT csv, DELIMITER ';', HEADER true);
 COPY stadion FROM '/csv/stadion.csv' (FORMAT csv, DELIMITER ';', HEADER true);
 COPY spieler FROM '/csv/spieler.csv' (FORMAT csv, DELIMITER ';', HEADER true);
