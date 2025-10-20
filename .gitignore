@@ -19,7 +19,7 @@ tmp
 dependencies.svg
 
 # Sensible Daten (Passwort, Token, private Schluessel)
-.extras/compose/buch/.env
+.extras/compose/fussballverein/.env
 .extras/compose/mysql/db_root_password.txt
 .extras/compose/postgres/db_password.txt
 .extras/*.png
@@ -72,7 +72,7 @@ coverage
 *.launch
 .settings/
 .sonarlint
-.extras/compose/buch/.env
+.extras/compose/fussballverein/.env
 
 # IDE - VSCode
 .vscode/*
