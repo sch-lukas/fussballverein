@@ -14,8 +14,8 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import { Module } from '@nestjs/common';
-import { MailModule } from '../mail/module.js';
-import { KeycloakModule } from '../security/keycloak/module.js';
+import { MailModule } from '../mail/module.ts';
+import { KeycloakModule } from '../security/keycloak/module.ts';
 import { BuchController } from './controller/buch-controller.js';
 import { BuchWriteController } from './controller/buch-write-controller.js';
 import { BuchMutationResolver } from './resolver/mutation.js';

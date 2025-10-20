@@ -1,0 +1,46 @@
+@startuml ER Diagramm
+
+hide circle
+
+' evtl. Probleme mit Krähenfüßen vermeiden
+skinparam linetype ortho
+
+entity "Fussballverein" {
+  * id: integer <<generated>>
+  --
+  * name: text
+    gruendungsdatum: date
+    website: text
+    email: text
+    telefonnummer: text
+    mitgliederanzahl: integer
+  * **stadion_id**: integer <<FK>>
+  * erzeugt: timestamp
+  * aktualisiert: timestamp
+}
+
+entity "Stadion" {
+  * id: integer <<generated>>
+  --
+  * stadt: text
+    strasse: text
+    hausnummer: text
+    kapazitaet: integer
+}
+
+entity "Spieler" {
+  * id: integer <<generated>>
+  --
+  * vorname: text
+    nachname: text
+    alter: integer
+    starker_fuss: text
+  * **fussballverein_id**: integer <<FK>>
+}
+
+Fussballverein ||..|| Stadion
+Fussballverein ||..o{ Spieler
+
+footer (c) Dein Name
+
+@enduml
