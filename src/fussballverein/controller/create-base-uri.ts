@@ -19,8 +19,8 @@
  */
 
 import { type Request } from 'express';
-import { nodeConfig } from '../../config/node.js';
-import { BuchService } from '../service/buch-service.js';
+import { nodeConfig } from '../../config/node.ts';
+import { FussballvereinService } from '../service/fussballverein-service.ts';
 
 const port = `:${nodeConfig.port}`;
 
@@ -36,7 +36,7 @@ export const createBaseUri: ({
     const indexLastSlash = basePath.lastIndexOf('/');
     if (indexLastSlash > 0) {
         const idStr = basePath.slice(indexLastSlash + 1);
-        if (BuchService.ID_PATTERN.test(idStr)) {
+        if (FussballvereinService.ID_PATTERN.test(idStr)) {
             basePath = basePath.slice(0, indexLastSlash);
         }
     }
