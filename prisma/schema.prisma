@@ -20,6 +20,7 @@ model Fussballverein {
   email            String?
   telefonnummer    String?
   mitgliederanzahl Int?
+  logo             String?
   version          Int       @default(0)
   erzeugt          DateTime  @default(now()) @db.Timestamp(6)
   aktualisiert     DateTime  @default(now()) @updatedAt @db.Timestamp(6)
