@@ -110,9 +110,10 @@ Schema `buch` mit dem DB-User `buch` als _Owner_ angelegt:
 
 ```powershell
    docker compose exec db bash
-      psql --dbname=postgres --username=postgres --file=/sql/create-db-buch.sql
-      psql --dbname=fussballverein --username=fussballverein --file=/sql/create-schema-buch.sql
-      psql --dbname=fussballverein --username=fussballverein --file=/sql/create-table.sql
+      psql --dbname=fussballverein --username=fussballverein --file=/sql/drop-table-fussballverein.sql
+      psql --dbname=fussballverein --username=fussballverein --file=/sql/create-db-fussballverein.sql
+      psql --dbname=fussballverein --username=fussballverein --file=/sql/create-schema-fussballverein.sql
+      psql --dbname=fussballverein --username=fussballverein --file=/sql/create-table-fussballverein.sql
       psql --dbname=fussballverein --username=postgres --file=/sql/copy-csv-fussballverein.sql
       exit
     docker compose down
