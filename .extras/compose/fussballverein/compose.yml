@@ -14,7 +14,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 # Aufruf:   docker compose up
-#           docker compose exec buch bash   # "ash" bei Alpine
+#           docker compose exec fussballverein bash   # "ash" bei Alpine
 #             id
 #             env
 #             pwd
@@ -41,11 +41,11 @@ include:
 
 # https://docs.docker.com/compose/compose-file/05-services
 services:
-  buch:
-    image: juergenzimmermann/buch:2025.10.1-trixie
+  fussballverein:
+    image: juergenzimmermann/fussballverein:2025.10.1-trixie
     #entrypoint: ["/bin/bash", "-c", "echo 'Container als bash gestartet.' && sleep infinity"]
 
-    #image: juergenzimmermann/buch:2025.10.1-alpine
+    #image: juergenzimmermann/fussballverein:2025.10.1-alpine
     # (d)ash = (Debian) Almquist Shell
     #entrypoint: ["/bin/ash", "-c", "echo 'Container als ash gestartet.' && sleep infinity"]
 
@@ -70,7 +70,7 @@ services:
         read_only: true
     networks: [acme-network]
     env_file: .env
-    #hostname: buch
+    #hostname: fussballverein
     cap_drop: [ALL]
     deploy:
       resources:
