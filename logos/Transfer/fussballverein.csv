@@ -1,0 +1,5 @@
+id;name;gruendungsdatum;website;email;telefonnummer;mitgliederanzahl;logo;erzeugt;aktualisiert;version
+1;FC_Bayern München;1900-02-27;https://fcbayern.com;kontakt@fcbayern.com;+49-89-699310;300000;"C:\software-engeneering\fussballverein\logos\FC_Bayern.png";2025-02-01 00:00:00;2025-02-01 00:00:00;1
+2;TSG_Hoffenheim;1899-07-01;https://tsg-hoffenheim.de;info@tsg-hoffenheim.de;+49-7261-94930;10000;"C:\software-engeneering\fussballverein\logos\TSG_Hoffenheim.png";2025-02-02 00:00:00;2025-02-02 00:00:00;1
+3;FC_Barcelona;1899-11-29;https://fcbarcelona.com;info@fcbarcelona.cat;+34-902-189900;143000;"C:\software-engeneering\fussballverein\logos\FC_Barcelona.png";2025-02-03 00:00:00;2025-02-03 00:00:00;1
+4;FC_Liverpool;1892-06-03;https://liverpoolfc.com;info@liverpoolfc.com;+44-151-2606677;85000;"C:\software-engeneering\fussballverein\logos\FC_Liverpool.png";2025-02-04 00:00:00;2025-02-04 00:00:00;1
