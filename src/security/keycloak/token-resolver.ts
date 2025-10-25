@@ -16,7 +16,7 @@
 import { UseInterceptors } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { Public } from 'nest-keycloak-connect';
-import { BadUserInputError } from '../../buch/resolver/errors.js';
+import { BadUserInputError } from '../../fussballverein/resolver/errors.js';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
 import { KeycloakService } from './keycloak-service.js';

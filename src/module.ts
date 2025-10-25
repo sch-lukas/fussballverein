@@ -22,11 +22,11 @@ import {
 import { ConfigModule } from '@nestjs/config';
 import { GraphQLModule } from '@nestjs/graphql';
 import { AdminModule } from './admin/module.js';
-import { BuchController } from './buch/controller/buch-controller.js';
-import { BuchWriteController } from './buch/controller/buch-write-controller.js';
 import { DevModule } from './config/dev/module.js';
 import { graphQlModuleOptions } from './config/graphql.js';
-import { BuchModule } from './fussballverein/module.ts';
+import { FussballvereinController } from './fussballverein/controller/fussballverein-controller.js';
+import { FussballvereinWriteController } from './fussballverein/controller/fussballverein-write-controller.js';
+import { FussballvereinModule } from './fussballverein/module.ts';
 import { LoggerModule } from './logger/module.js';
 import { RequestLoggerMiddleware } from './logger/request-logger.js';
 import { KeycloakModule } from './security/keycloak/module.js';
@@ -34,7 +34,7 @@ import { KeycloakModule } from './security/keycloak/module.js';
 @Module({
     imports: [
         AdminModule,
-        BuchModule,
+        FussballvereinModule,
         // Umgebungsvariable DATABASE_URL fuer PrismaPg
         ConfigModule,
         DevModule,
@@ -47,6 +47,11 @@ export class AppModule implements NestModule {
     configure(consumer: MiddlewareConsumer) {
         consumer
             .apply(RequestLoggerMiddleware)
-            .forRoutes(BuchController, BuchWriteController, 'auth', 'graphql');
+            .forRoutes(
+                FussballvereinController,
+                FussballvereinWriteController,
+                'auth',
+                'graphql',
+            );
     }
 }
