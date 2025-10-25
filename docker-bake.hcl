@@ -22,13 +22,13 @@
 # https://docs.docker.com/build/bake/reference
 
 target "default" {
-  tags = ["docker.io/juergenzimmermann/buch:2025.10.1-trixie"]
+  tags = ["docker.io/juergenzimmermann/fussballverein:2025.10.1-trixie"]
   #dockerfile = "Dockerfile"
   #no-cache = true
 }
 
 target "alpine" {
-  tags = ["docker.io/juergenzimmermann/buch:2025.10.1-alpine"]
+  tags = ["docker.io/juergenzimmermann/fussballverein:2025.10.1-alpine"]
   dockerfile = "Dockerfile.alpine"
   #no-cache = true
 }
