@@ -13,18 +13,17 @@ datasource db {
 
 /// Hauptentität: Fussballverein
 model Fussballverein {
-  id               Int       @id @default(autoincrement())
+  id               Int        @id @default(autoincrement())
   name             String
-  gruendungsdatum  DateTime? @db.Date
+  gruendungsdatum  DateTime?  @db.Date
   website          String?
   email            String?
   telefonnummer    String?
   mitgliederanzahl Int?
-  logo             String?
-  version          Int       @default(0)
-  logo             String?
-  erzeugt          DateTime  @default(now()) @db.Timestamp(6)
-  aktualisiert     DateTime  @default(now()) @updatedAt @db.Timestamp(6)
+  version          Int        @default(0)
+  erzeugt          DateTime   @default(now()) @db.Timestamp(6)
+  aktualisiert     DateTime   @default(now()) @updatedAt @db.Timestamp(6)
+  logo_file        logo_file?
   spieler          Spieler[]
   stadion          Stadion?
 
@@ -59,5 +58,17 @@ model Stadion {
 
   @@index([fussballvereinId])
   @@map("stadion")
+  @@schema("fussballverein")
+}
+
+model logo_file {
+  id                Int            @id @default(autoincrement())
+  data              Bytes
+  filename          String
+  mimetype          String?
+  fussballverein_id Int            @unique
+  fussballverein    Fussballverein @relation(fields: [fussballverein_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([fussballverein_id])
   @@schema("fussballverein")
 }
