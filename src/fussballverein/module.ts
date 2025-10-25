@@ -14,14 +14,14 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import { Module } from '@nestjs/common';
-import { BuchController } fr../mail/module.tsoller/buch-controller.ts';
-import { BuchWriteController } f../security/keycloak/module.tsrite-controller.ts';
-import { BuchMutationResolver } from '../buch/resolver/mutation.ts';
-import { BuchQueryResolver } from '../buch/resolver/query.ts';
-import { BuchService } from '../buch/service/buch-service.ts';
-import { BuchWriteService } from '../buch/service/buch-write-service.ts';
-import { PrismaService } from '../buch/service/prisma-service.ts';
-import { WhereBuilder } from '../buch/service/where-builder.ts';
+import { fussballvereinController } from../mail/module.tsoller/fussballverein-controller.ts';
+import { fussballvereinWriteController } from../security/keycloak/module.tsrite-controller.ts';
+import { fussballvereinMutationResolver } from '../fussballverein/resolver/mutation.ts';
+import { fussballvereinQueryResolver } from '../fussballverein/resolver/query.ts';
+import { fussballvereinService } from '../fussballverein/service/fussballverein-service.ts';
+import { fussballvereinWriteService } from '../fussballverein/service/fussballverein-write-service.ts';
+import { PrismaService } from '../fussballverein/service/prisma-service.ts';
+import { WhereBuilder } from '../fussballverein/service/where-builder.ts';
 import { MailModule } from '../mail/module.ts';
 import { KeycloakModule } from '../security/keycloak/module.ts';
 
@@ -37,17 +37,17 @@ import { KeycloakModule } from '../security/keycloak/module.ts';
  */
 @Module({
     imports: [KeycloakModule, MailModule],
-    controllers: [BuchController, BuchWriteController],
+    controllers: [fussballvereinController, fussballvereinWriteController],
     // Provider sind z.B. Service-Klassen fuer DI
     providers: [
-        BuchService,
-        BuchWriteService,
-        BuchQueryResolver,
-        BuchMutationResolver,
+        fussballvereinService,
+        fussballvereinWriteService,
+        fussballvereinQueryResolver,
+        fussballvereinMutationResolver,
         PrismaService,
         WhereBuilder,
     ],
     // Export der Provider fuer DI in anderen Modulen
-    exports: [BuchService, BuchWriteService],
+    exports: [fussballvereinService, fussballvereinWriteService],
 })
-export class BuchModule {}
+export class fussballvereinModule {}
