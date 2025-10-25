@@ -1,4 +1,5 @@
-// Copyright (C) 2016 - present Juergen Zimmermann, Hochschule Karlsruhe
+// Copyright (C) 2025 - present [Dein Name]
+// Hochschule Karlsruhe / Projekt Fussballverein
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -19,17 +20,11 @@
  */
 
 import { Injectable } from '@nestjs/common';
-import { type FussballvereinWhereInput } from '../../generated/prisma/models/Fussballverein.ts';
+import { Prisma } from '../../generated/prisma/client.js';
+import { type FussballvereinWhereInput } from '../../generated/prisma/models/Fussballverein.js';
 import { getLogger } from '../../logger/logger.js';
-import { type Suchparameter } from './suchparameter.ts';
+import { type Suchparameter } from './suchparameter.js';
 
-/** Typdefinitionen für die Suche mit der Buch-ID. */
-export type BuildIdParams = {
-    /** ID des gesuchten Buchs. */
-    readonly id: number;
-    /** Sollen die Abbildungen mitgeladen werden? */
-    readonly mitAbbildungen?: boolean;
-};
 /**
  * Die Klasse `WhereBuilder` baut die WHERE-Klausel für DB-Anfragen mit _Prisma_.
  */
@@ -38,125 +33,94 @@ export class WhereBuilder {
     readonly #logger = getLogger(WhereBuilder.name);
 
     /**
-     * WHERE-Klausel für die flexible Suche nach Büchern bauen.
-     * @param suchparameter JSON-Objekt mit Suchparameter. Bei "titel" wird mit
-     * einem Teilstring gesucht, bei "rating" mit einem Mindestwert, bei "preis"
-     * mit der Obergrenze.
-     * @returns BuchWhereInput
+     * WHERE-Klausel für die flexible Suche nach Fussballvereinen bauen.
+     *
+     * Unterstützte Parameter:
+     * - `name`: Teilstring, case-insensitive
+     * - `gruendungsdatum`: untere Grenze (>=)
+     * - `website`, `email`, `telefonnummer`: exakter Vergleich
+     * - `mitgliederanzahl`: Mindestwert (>=)
+     * - `stadt`: Teilstring via Relation `stadion`
+     * - `kapazitaet`: Mindestwert (>=) via Relation `stadion`
+     *
+     * @param suchparameter JSON-Objekt mit Suchparametern.
+     * @returns FussballvereinWhereInput
      */
-    // "rest properties" ab ES 2018 https://github.com/tc39/proposal-object-rest-spread
     // eslint-disable-next-line max-lines-per-function, prettier/prettier, sonarjs/cognitive-complexity
-    build({
-        javascript,
-        typescript,
-        java,
-        python,
-        ...restProps
-    }: Suchparameter) {
-        this.#logger.debug(
-            'build: javascript=%s, typescript=%s, java=%s, python=%s, restProps=%o',
-            javascript ?? 'undefined',
-            typescript ?? 'undefined',
-            java ?? 'undefined',
-            python ?? 'undefined',
-            restProps,
-        );
-
-        // Beispiel:
-        // { titel: 'a', rating: 4, preis: 22.5, javascript: true }
-        // WHERE titel ILIKE %a% AND rating >= 4 AND preis <= 22.5 AND schlagwoerter @> '["JAVASCRIPT"]'
+    build(suchparameter: Suchparameter): FussballvereinWhereInput {
+        this.#logger.debug('build: suchparameter=%o', suchparameter);
 
         let where: FussballvereinWhereInput = {};
 
-        // Properties vom Typ number, enum, boolean, Date
-        // diverse Vergleiche, z.B. Gleichheit, <= (lte), >= (gte)
-        Object.entries(restProps).forEach(([key, value]) => {
+        // Alle Parameter iterieren
+        Object.entries(suchparameter ?? {}).forEach(([key, value]) => {
             switch (key) {
-                case 'Stadion':
+                case 'name':
+                    where.name = {
+                        contains: value as string,
+                        mode: Prisma.QueryMode.insensitive,
+                    };
+                    break;
+
+                case 'gruendungsdatum': {
+                    const date = new Date(value as string);
+                    if (!Number.isNaN(date.getTime())) {
+                        where.gruendungsdatum = { gte: date };
+                    }
+                    break;
+                }
+
+                case 'website':
+                    where.website = { equals: value as string };
+                    break;
+
+                case 'email':
+                    where.email = { equals: value as string };
+                    break;
+
+                case 'telefonnummer':
+                    where.telefonnummer = {
+                        contains: value as string,
+                        mode: Prisma.QueryMode.insensitive,
+                    };
+                    break;
+
+                case 'mitgliederanzahl': {
+                    const anzahl = Number.parseInt(value as string, 10);
+                    if (!Number.isNaN(anzahl)) {
+                        where.mitgliederanzahl = { gte: anzahl };
+                    }
+                    break;
+                }
+
+                case 'stadt':
                     where.stadion = {
-                        // https://www.prisma.io/docs/orm/prisma-client/queries/filtering-and-sorting#filter-on-relations
-                        stadion: {
-                            // https://www.prisma.io/docs/orm/reference/prisma-client-reference#filter-conditions-and-operators
-                            contains: value as string,
-                            mode: Prisma.QueryMode.insensitive,
+                        is: {
+                            stadt: {
+                                contains: value as string,
+                                mode: Prisma.QueryMode.insensitive,
+                            },
                         },
                     };
                     break;
-                case 'isbn':
-                    where.isbn = { equals: value as string };
-                    break;
-                case 'rating': {
-                    const ratingNumber = Number.parseInt(value as string);
-                    if (!Number.isNaN(ratingNumber)) {
-                        where.rating = { gte: ratingNumber };
+
+                case 'kapazitaet': {
+                    const kapazitaet = Number.parseInt(value as string, 10);
+                    if (!Number.isNaN(kapazitaet)) {
+                        where.stadion = {
+                            is: { kapazitaet: { gte: kapazitaet } },
+                        };
                     }
                     break;
                 }
-                case 'preis': {
-                    const preisNumber = Number.parseInt(value as string);
-                    if (!Number.isNaN(preisNumber)) {
-                        where.preis = { lte: preisNumber };
-                    }
-                    break;
-                }
-                case 'art':
-                    // enum
-                    where.art = { equals: value as Buchart };
-                    break;
-                case 'lieferbar':
-                    // boolean
-                    where.lieferbar = {
-                        equals: (value as string).toLowerCase() === 'true',
-                    };
-                    break;
-                case 'datum':
-                    where.datum = { gte: new Date(value as string) };
-                    break;
-                case 'homepage':
-                    where.homepage = { equals: value as string };
+
+                default:
+                    this.#logger.debug('Unbekannter Suchparameter: %s', key);
                     break;
             }
         });
 
-        const schlagwoerter = this.#buildSchlagwoerter({
-            javascript,
-            typescript,
-            java,
-            python,
-        });
-        if (schlagwoerter.length >= 0) {
-            // https://www.prisma.io/docs/orm/prisma-client/special-fields-and-types/working-with-json-fields#json-object-arrays
-            where.schlagwoerter = { array_contains: schlagwoerter };
-        }
-
         this.#logger.debug('build: where=%o', where);
         return where;
-    }
-
-    #buildSchlagwoerter({
-        javascript,
-        typescript,
-        java,
-        python,
-    }: {
-        javascript: string | undefined;
-        typescript: string | undefined;
-        java: string | undefined;
-        python: string | undefined;
-    }): ReadonlyArray<string> {
-        const schlagwoerter: string[] = [];
-        if (javascript?.toLowerCase() === 'true') {
-            schlagwoerter.push('JAVASCRIPT');
-        }
-        if (typescript?.toLowerCase() === 'true') {
-            schlagwoerter.push('TYPESCRIPT');
-        }
-        if (java?.toLowerCase() === 'true') {
-            schlagwoerter.push('JAVA');
-        }
-        if (python?.toLowerCase() === 'true') {
-            schlagwoerter.push('PYTHON');
-        }
-        return schlagwoerter;
     }
 }
