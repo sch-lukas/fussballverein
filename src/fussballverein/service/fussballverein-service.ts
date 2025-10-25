@@ -1,56 +1,58 @@
-// Copyright (C) 2025 - present [Dein Name]
-// Hochschule Karlsruhe / Projekt Fussballverein
-//
-// Dieses Programm ist freie Software: Sie können es unter den Bedingungen
-// der GNU General Public License, Version 3 oder höher, weitergeben und/oder ändern.
-// Weitere Informationen: https://www.gnu.org/licenses/
-
-/**
- * Das Modul besteht aus der Klasse {@linkcode FussballvereinService}.
- * @packageDocumentation
- */
-
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, PrismaClient } from '../../generated/prisma/client.js';
 import { getLogger } from '../../logger/logger.js';
-import { type Fussballverein } from '../entity/fussballverein.js';
 import { PrismaService } from './prisma-service.js';
-import { PrismaClient } from '../../generated/prisma/client.ts';
 
-// Typdefinition für `findById`
+// Ladeprofile wie beim Vorbild
+type VereinMitBasis = Prisma.FussballvereinGetPayload<{}>;
+type VereinMitStadion = Prisma.FussballvereinGetPayload<{
+    include: { stadion: true };
+}>;
+type VereinMitDetails = Prisma.FussballvereinGetPayload<{
+    include: { stadion: true; spieler: true; logo_file: true };
+}>;
+
 type FindByIdParams = {
-    /** ID des gesuchten Vereins */
     readonly id: number;
+    /** Analog zu "mitAbbildungen": steuert, ob Relationen mitgeladen werden */
+    readonly mitDetails?: boolean; // optionaler Schalter, wie beim Vorbild
 };
 
-/**
- * Die Klasse `FussballvereinService` implementiert das Lesen für Fußballvereine
- * und greift mit _Prisma_ auf eine relationale DB zu.
- */
 @Injectable()
 export class FussballvereinService {
-    static readonly ID_PATTERN = /^[1-9]\d{0,10}$/u;
-
     readonly #prisma: PrismaClient;
     readonly #logger = getLogger(FussballvereinService.name);
+
+    // vordefinierte include-Sets wie im Vorbild
+    readonly #includeStadion = { stadion: true } as const;
+    readonly #includeDetails = {
+        stadion: true,
+        spieler: true,
+        logo_file: true,
+    } as const;
 
     constructor(prisma: PrismaService) {
         this.#prisma = prisma.client;
     }
 
-    /**
-     * Einen Fußballverein asynchron anhand seiner ID suchen.
-     * @param id ID des gesuchten Vereins
-     * @returns Der gefundene Verein als Promise.
-     * @throws NotFoundException falls kein Verein mit der ID existiert
-     */
-    async findById({ id }: FindByIdParams): Promise<Readonly<Fussballverein>> {
-        this.#logger.debug('findById: id=%d', id);
+    async findById({
+        id,
+        mitDetails = false,
+    }: FindByIdParams): Promise<
+        Readonly<VereinMitDetails | VereinMitStadion | VereinMitBasis>
+    > {
+        this.#logger.debug(
+            'findById: id=%d, mitDetails=%s',
+            id,
+            String(mitDetails),
+        );
 
-        // Lesen: Keine Transaktion erforderlich
+        const include = mitDetails
+            ? this.#includeDetails
+            : this.#includeStadion; // oder {} falls GAR nichts
         const verein = await this.#prisma.fussballverein.findUnique({
             where: { id },
-            // Minimaler Start: keine Beziehungen laden.
-            // Später erweiterbar mit include: { stadion: true, spieler: true, logo_file: true }
+            include, // exakt wie beim Vorbild: include wird dynamisch gewählt
         });
 
         if (verein === null) {
