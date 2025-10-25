@@ -40,7 +40,7 @@ type FussballvereinCreated = Prisma.FussballvereinGetPayload<{
     include: {
         spieler: true;
         stadion: true;
-        logoFile: true; // snake_case!
+        logoFile: true;
     };
 }>;
 

@@ -23,7 +23,7 @@ import { StadionDto } from './stadion-dto.ts';
  * Basis-DTO für einen Fussballverein, ohne die zugehörigen
  * Spieler und das Stadion.
  */
-class FussballvereinDtoOhneRef {
+export class FussballvereinDtoOhneRef {
     @IsString()
     @IsNotEmpty()
     @MaxLength(60)
