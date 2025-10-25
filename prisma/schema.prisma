@@ -1,5 +1,5 @@
 generator client {
-  provider        = "prisma-client"
+  provider        = "prisma-client-js"
   output          = "../src/generated/prisma"
   previewFeatures = ["nativeDistinct", "relationJoins"]
   engineType      = "client"
@@ -11,7 +11,6 @@ datasource db {
   schemas  = ["fussballverein"]
 }
 
-/// Hauptentität: Fussballverein
 model Fussballverein {
   id               Int        @id @default(autoincrement())
   name             String
@@ -23,7 +22,7 @@ model Fussballverein {
   version          Int        @default(0)
   erzeugt          DateTime   @default(now()) @db.Timestamp(6)
   aktualisiert     DateTime   @default(now()) @updatedAt @db.Timestamp(6)
-  logo_file        logo_file?
+  logoFile         LogoFile?
   spieler          Spieler[]
   stadion          Stadion?
 
@@ -31,7 +30,6 @@ model Fussballverein {
   @@schema("fussballverein")
 }
 
-/// Spieler (1:n Beziehung)
 model Spieler {
   id               Int            @id @default(autoincrement())
   vorname          String
@@ -46,7 +44,6 @@ model Spieler {
   @@schema("fussballverein")
 }
 
-/// Stadion (1:1 Beziehung)
 model Stadion {
   id               Int            @id @default(autoincrement())
   stadt            String
@@ -61,14 +58,15 @@ model Stadion {
   @@schema("fussballverein")
 }
 
-model logo_file {
-  id                Int            @id @default(autoincrement())
-  data              Bytes
-  filename          String
-  mimetype          String?
-  fussballverein_id Int            @unique
-  fussballverein    Fussballverein @relation(fields: [fussballverein_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+model LogoFile {
+  id               Int            @id @default(autoincrement())
+  data             Bytes
+  filename         String
+  mimetype         String?
+  fussballvereinId Int            @unique @map("fussballverein_id")
+  fussballverein   Fussballverein @relation(fields: [fussballvereinId], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
-  @@index([fussballverein_id])
+  @@index([fussballvereinId])
+  @@map("logo_file")
   @@schema("fussballverein")
 }

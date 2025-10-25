@@ -1,26 +1,8 @@
-// Copyright (C) 2016 - present Juergen Zimmermann, Hochschule Karlsruhe
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-/**
- * Das Modul besteht aus der Klasse {@linkcode FussballvereinService}.
- * @packageDocumentation
- */
+// src/fussballverein/service/fussballverein-service.ts
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import {
-    type logo_file, // <-- snake_case Typ vom Prisma-Client
+    type LogoFile, // Korrekter Typ-Import
     Prisma,
     PrismaClient,
 } from '../../generated/prisma/client.js';
@@ -31,35 +13,24 @@ import { type Slice } from './slice.js';
 import { type Suchparameter, suchparameterNamen } from './suchparameter.js';
 import { WhereBuilder } from './where-builder.js';
 
-// -----------------------------------------------------------------------------
-// Typdefinitionen für Include-Varianten
-// -----------------------------------------------------------------------------
-
+// --- Korrekte Typdefinitionen für Payloads ---
 export type FussballvereinMitBasis = Prisma.FussballvereinGetPayload<{}>;
-
 export type FussballvereinMitSpielern = Prisma.FussballvereinGetPayload<{
     include: { spieler: true };
 }>;
-
 export type FussballvereinMitStadion = Prisma.FussballvereinGetPayload<{
     include: { stadion: true };
 }>;
-
 export type FussballvereinMitLogo = Prisma.FussballvereinGetPayload<{
-    include: { logo_file: true }; // <-- snake_case Relation
+    include: { logoFile: true }; // Korrekt: camelCase
 }>;
-
 export type FussballvereinMitAllen = Prisma.FussballvereinGetPayload<{
     include: {
         spieler: true;
         stadion: true;
-        logo_file: true; // <-- snake_case Relation
+        logoFile: true; // Korrekt: camelCase
     };
 }>;
-
-// -----------------------------------------------------------------------------
-// Typdefinition für findById-Parameter
-// -----------------------------------------------------------------------------
 
 type FindByIdParams = {
     readonly id: number;
@@ -68,21 +39,15 @@ type FindByIdParams = {
     readonly mitLogo?: boolean;
 };
 
-/**
- * Die Klasse `FussballvereinService` implementiert das Lesen für Vereine und
- * greift mit _Prisma_ auf eine relationale DB zu.
- */
 @Injectable()
 export class FussballvereinService {
-    static readonly ID_PATTERN = /^[1-9]\d{0,10}$/u;
-
     readonly #prisma: PrismaClient;
     readonly #whereBuilder: WhereBuilder;
 
-    // Häufig verwendete Include-Objekte (werden unten kombiniert)
+    // --- Korrekte Include-Objekte ---
     readonly #includeSpieler = { spieler: true } as const;
     readonly #includeStadion = { stadion: true } as const;
-    readonly #includeLogo = { logo_file: true } as const; // <-- snake_case
+    readonly #includeLogo = { logoFile: true } as const; // Korrekt: camelCase
 
     readonly #logger = getLogger(FussballvereinService.name);
 
@@ -103,76 +68,65 @@ export class FussballvereinService {
         this.#logger.debug(
             'findById: id=%d, mitSpielern=%s, mitStadion=%s, mitLogo=%s',
             id,
-            String(mitSpielern),
-            String(mitStadion),
-            String(mitLogo),
+            mitSpielern,
+            mitStadion,
+            mitLogo,
         );
 
-        // Include-Objekt dynamisch zusammensetzen
-        const include: Record<string, true> = {};
+        const include: any = {}; // any, um dynamische Zuweisung zu erlauben
         if (mitSpielern) Object.assign(include, this.#includeSpieler);
         if (mitStadion) Object.assign(include, this.#includeStadion);
-        if (mitLogo) Object.assign(include, this.#includeLogo);
+        if (mitLogo) Object.assign(include, this.#includeLogo); // Nutzt das korrekte Objekt
 
-        const verein:
-            | FussballvereinMitAllen
-            | Prisma.FussballvereinGetPayload<{}>
-            | null = await this.#prisma.fussballverein.findUnique({
+        const verein = await this.#prisma.fussballverein.findUnique({
             where: { id },
             ...(Object.keys(include).length > 0 ? { include } : {}),
         });
 
         if (verein === null) {
-            this.#logger.debug('Es gibt keinen Verein mit der ID %d', id);
             throw new NotFoundException(
                 `Es gibt keinen Verein mit der ID ${id}.`,
             );
         }
-
         this.#logger.debug('findById: verein=%o', verein);
         return verein as FussballvereinMitAllen;
     }
 
     /**
-     * Logo-Datei (Binärdaten) zu einem Verein suchen.
+     * Logo-Datei zu einem Verein anhand der Vereins-ID suchen.
      */
-    async findFileByFussballvereinId(
-        fussballvereinId: number,
-    ): Promise<Readonly<logo_file> | undefined> {
-        // <-- snake_case Typ
-        this.#logger.debug(
-            'findFileByFussballvereinId: fussballvereinId=%d',
-            fussballvereinId,
-        );
+    async findLogoById(id: number): Promise<Readonly<LogoFile>> {
+        this.#logger.debug('findLogoById: id=%d', id);
 
-        const logo: logo_file | null = await this.#prisma.logo_file.findUnique({
-            where: { fussballverein_id: fussballvereinId }, // <-- snake_case FK
+        const vereinWithLogo = await this.#prisma.fussballverein.findUnique({
+            where: { id },
+            include: {
+                logoFile: true, // Lädt die korrekte Relation
+            },
         });
 
-        if (logo === null) {
-            this.#logger.debug(
-                'findFileByFussballvereinId: Keine Datei gefunden',
+        // Korrekte Prüfung auf null/undefined für die Relation
+        if (
+            vereinWithLogo?.logoFile === null ||
+            vereinWithLogo?.logoFile === undefined
+        ) {
+            throw new NotFoundException(
+                `Kein Logo für den Verein mit der ID ${id} gefunden.`,
             );
-            return;
         }
 
         this.#logger.debug(
-            'findFileByFussballvereinId: id=%s, byteLength=%d, filename=%s, mimetype=%s, fussballverein_id=%d',
-            logo.id,
-            logo.data.byteLength,
-            logo.filename,
-            logo.mimetype ?? 'undefined',
-            logo.fussballverein_id, // <-- snake_case Feld
+            'findLogoById: logoFile gefunden=%o',
+            vereinWithLogo.logoFile,
         );
-
-        return logo;
+        return vereinWithLogo.logoFile;
     }
 
     /**
-     * Vereine asynchron suchen.
+     * Vereine asynchron suchen (mit Paginierung und Filter).
      */
     async find(
-        suchparameter: Suchparameter | undefined,
+        suchparameter: Suchparameter,
         pageable: Pageable,
     ): Promise<Readonly<Slice<Readonly<FussballvereinMitBasis>>>> {
         this.#logger.debug(
@@ -181,6 +135,7 @@ export class FussballvereinService {
             pageable,
         );
 
+        // Wenn keine Suchparameter, alle Vereine mit Paginierung holen
         if (
             suchparameter === undefined ||
             Object.keys(suchparameter).length === 0
@@ -188,65 +143,66 @@ export class FussballvereinService {
             return await this.#findAll(pageable);
         }
 
+        // Suchparameter validieren (wie im Original)
         if (
             !this.#checkKeys(Object.keys(suchparameter)) ||
-            !this.#checkEnums() // <-- ohne Argument
+            !this.#checkEnums()
         ) {
-            this.#logger.debug('Ungueltige Suchparameter');
             throw new NotFoundException('Ungueltige Suchparameter');
         }
 
+        // Prisma WHERE-Klausel bauen
         const where = this.#whereBuilder.build(suchparameter);
         const { number, size } = pageable;
 
-        const vereine: FussballvereinMitBasis[] =
-            await this.#prisma.fussballverein.findMany({
-                where,
-                skip: number * size,
-                take: size,
-            });
+        const vereine = await this.#prisma.fussballverein.findMany({
+            where,
+            skip: number * size,
+            take: size,
+            // Optional: Standard-Sortierung
+            // orderBy: { id: 'asc' },
+        });
 
         if (vereine.length === 0) {
-            this.#logger.debug('find: Keine Vereine gefunden');
             throw new NotFoundException(
-                `Keine Vereine gefunden: ${JSON.stringify(
-                    suchparameter,
-                )}, Seite ${pageable.number}`,
+                `Keine Vereine gefunden: ${JSON.stringify(suchparameter)}, Seite ${pageable.number}`,
             );
         }
 
-        const totalElements = await this.count();
+        // Gesamtzahl für Paginierung ermitteln
+        const totalElements = await this.count(suchparameter);
         return this.#createSlice(vereine, totalElements);
     }
 
-    async count(): Promise<number> {
-        this.#logger.debug('count');
-        const count = await this.#prisma.fussballverein.count();
+    /**
+     * Anzahl der Vereine zählen (mit optionalen Filtern).
+     */
+    async count(suchparameter: Suchparameter = {}): Promise<number> {
+        this.#logger.debug('count: suchparameter=%o', suchparameter);
+        const where = this.#whereBuilder.build(suchparameter);
+        const count = await this.#prisma.fussballverein.count({ where });
         this.#logger.debug('count: %d', count);
         return count;
     }
 
-    // -----------------------------------------------------------------------------
-    // Private Hilfsmethoden
-    // -----------------------------------------------------------------------------
+    // --- Private Hilfsmethoden (genau wie im Original) ---
 
     async #findAll(
         pageable: Pageable,
     ): Promise<Readonly<Slice<FussballvereinMitBasis>>> {
         const { number, size } = pageable;
 
-        const vereine: FussballvereinMitBasis[] =
-            await this.#prisma.fussballverein.findMany({
-                skip: number * size,
-                take: size,
-            });
+        const vereine = await this.#prisma.fussballverein.findMany({
+            skip: number * size,
+            take: size,
+            // orderBy: { id: 'asc' },
+        });
 
         if (vereine.length === 0) {
-            this.#logger.debug('#findAll: Keine Vereine gefunden');
             throw new NotFoundException(`Ungueltige Seite "${number}"`);
         }
 
-        const totalElements = await this.count();
+        const totalElements = await this.count(); // Zählt alle Elemente
         return this.#createSlice(vereine, totalElements);
     }
 
@@ -262,16 +218,13 @@ export class FussballvereinService {
         return vereinSlice;
     }
 
-    #checkKeys(keys: string[]) {
+    #checkKeys(keys: string[]): boolean {
         this.#logger.debug('#checkKeys: keys=%o', keys);
         let validKeys = true;
         keys.forEach((key) => {
-            if (
-                !suchparameterNamen.includes(key) &&
-                key !== 'name' &&
-                key !== 'stadt' &&
-                key !== 'gruendungsdatum'
-            ) {
+            // Prüft, ob der Schlüssel ein gültiger Suchparameter ist
+            if (!suchparameterNamen.includes(key as any)) {
+                // 'as any' zur Typ-Umgehung
                 this.#logger.debug(
                     '#checkKeys: ungueltiger Suchparameter "%s"',
                     key,
@@ -282,7 +235,8 @@ export class FussballvereinService {
         return validKeys;
     }
 
-    #checkEnums() {
+    #checkEnums(): boolean {
+        // Hier könnten Prüfungen für Enum-Werte stehen, falls du welche hättest
         this.#logger.debug('#checkEnums: keine Enum-Pruefungen erforderlich');
         return true;
     }

@@ -207,18 +207,15 @@ export class FussballvereinGetController {
             throw new NotFoundException(`Die ID ${idStr} ist ungueltig.`);
         }
 
-        // Annahme: findLogoById holt logo (Buffer) und logoMimeType (String)
-        const verein = await this.#service.findLogoById(id);
-        if (!verein?.logo) {
-            throw new NotFoundException('Kein Logo gefunden.');
-        }
+        // Der Service liefert jetzt direkt das LogoFile-Objekt
+        const logoFile = await this.#service.findLogoById(id);
 
-        // Setzt den Content-Type für den Browser und den Dateinamen
-        res.contentType(verein.logoMimeType ?? 'image/png').set({
-            'Content-Disposition': `inline; filename="logo-${id}.png"`,
+        // Der Controller greift auf die korrekten Felder des LogoFile-Objekts zu
+        res.contentType(logoFile.mimetype ?? 'application/octet-stream').set({
+            'Content-Disposition': `inline; filename="${logoFile.filename}"`,
         });
 
-        // Schickt den Buffer als StreamableFile zurück
-        return new StreamableFile(verein.logo);
+        // Schickt den Buffer (logoFile.data) als StreamableFile zurück
+        return new StreamableFile(logoFile.data);
     }
 }
