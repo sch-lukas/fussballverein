@@ -20,10 +20,10 @@ import { Public } from 'nest-keycloak-connect';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
 import {
-    BuchService,
-    type BuchMitTitel,
-    type BuchMitTitelUndAbbildungen,
-} from '../service/buch-service.js';
+    fussballvereinService,
+    type fussballvereinMitTitel,
+    type fussballvereinMitTitelUndAbbildungen,
+} from '../service/fussballverein-service.js';
 import { createPageable } from '../service/pageable.js';
 import { Slice } from '../service/slice.js';
 import { Suchparameter } from '../service/suchparameter.js';
@@ -39,37 +39,37 @@ export type SuchparameterInput = {
     };
 };
 
-@Resolver('Buch')
+@Resolver('fussballverein')
 @UseFilters(HttpExceptionFilter)
 @UseInterceptors(ResponseTimeInterceptor)
-export class BuchQueryResolver {
-    readonly #service: BuchService;
+export class fussballvereinQueryResolver {
+    readonly #service: fussballvereinService;
 
-    readonly #logger = getLogger(BuchQueryResolver.name);
+    readonly #logger = getLogger(fussballvereinQueryResolver.name);
 
-    constructor(service: BuchService) {
+    constructor(service: fussballvereinService) {
         this.#service = service;
     }
 
-    @Query('buch')
+    @Query('fussballverein')
     @Public()
     async findById(
         @Args() { id }: IdInput,
-    ): Promise<Readonly<BuchMitTitelUndAbbildungen>> {
+    ): Promise<Readonly<fussballvereinMitTitelUndAbbildungen>> {
         this.#logger.debug('findById: id=%s', id);
 
-        const buch: Readonly<BuchMitTitelUndAbbildungen> =
+        const fussballverein: Readonly<fussballvereinMitTitelUndAbbildungen> =
             await this.#service.findById({ id: Number(id) });
 
-        this.#logger.debug('findById: buch=%o', buch);
-        return buch;
+        this.#logger.debug('findById: fussballverein=%o', fussballverein);
+        return fussballverein;
     }
 
     @Query('buecher')
     @Public()
     async find(
         @Args() input: SuchparameterInput | undefined,
-    ): Promise<BuchMitTitel[]> {
+    ): Promise<fussballvereinMitTitel[]> {
         this.#logger.debug('find: input=%s', JSON.stringify(input));
         const pageable = createPageable({});
         const suchparameter = input?.suchparameter;
@@ -81,21 +81,24 @@ export class BuchQueryResolver {
                 (suchparameter as any).lieferbar = lieferbar.toString();
             }
         }
-        const buecherSlice: Readonly<Slice<Readonly<BuchMitTitel>>> =
+        const buecherSlice: Readonly<Slice<Readonly<fussballvereinMitTitel>>> =
             await this.#service.find(suchparameter as any, pageable); // NOSONAR
         this.#logger.debug('find: buecherSlice=%o', buecherSlice);
         return buecherSlice.content;
     }
 
     @ResolveField('rabatt')
-    rabatt(@Parent() buch: BuchMitTitel, short: boolean | undefined) {
+    rabatt(
+        @Parent() fussballverein: fussballvereinMitTitel,
+        short: boolean | undefined,
+    ) {
         this.#logger.debug(
-            'rabatt: buch=%o, short=%s',
-            buch,
+            'rabatt: fussballverein=%o, short=%s',
+            fussballverein,
             short?.toString() ?? 'undefined',
         );
         // "Nullish Coalescing" ab ES2020
-        const rabatt = buch.rabatt ?? BigNumber(0);
+        const rabatt = fussballverein.rabatt ?? BigNumber(0);
         const shortStr = short === undefined || short ? '%' : 'Prozent';
         return `${rabatt.toString()} ${shortStr}`;
     }
