@@ -1,4 +1,5 @@
-// Copyright (C) 2021 - present Juergen Zimmermann, Hochschule Karlsruhe
+// Copyright (C) 2025 - present [Dein Name]
+// Hochschule Karlsruhe / Projekt Fussballverein
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -14,19 +15,18 @@
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import { UseFilters, UseInterceptors } from '@nestjs/common';
-import { Args, Parent, Query, ResolveField, Resolver } from '@nestjs/graphql';
-import BigNumber from 'bignumber.js'; // eslint-disable-line @typescript-eslint/naming-convention
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { Public } from 'nest-keycloak-connect';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
 import {
-    fussballvereinService,
-    type fussballvereinMitTitel,
-    type fussballvereinMitTitelUndAbbildungen,
+    FussballvereinService,
+    type FussballvereinMitAllen,
+    type FussballvereinMitBasis,
 } from '../service/fussballverein-service.js';
 import { createPageable } from '../service/pageable.js';
-import { Slice } from '../service/slice.js';
-import { Suchparameter } from '../service/suchparameter.js';
+import { type Slice } from '../service/slice.js';
+import { type Suchparameter } from '../service/suchparameter.js';
 import { HttpExceptionFilter } from './http-exception-filter.js';
 
 export type IdInput = {
@@ -34,20 +34,18 @@ export type IdInput = {
 };
 
 export type SuchparameterInput = {
-    readonly suchparameter: Omit<Suchparameter, 'lieferbar'> & {
-        lieferbar: boolean | undefined;
-    };
+    readonly suchparameter: Suchparameter | undefined;
 };
 
-@Resolver('fussballverein')
+@Resolver('Fussballverein')
 @UseFilters(HttpExceptionFilter)
 @UseInterceptors(ResponseTimeInterceptor)
-export class fussballvereinQueryResolver {
-    readonly #service: fussballvereinService;
+export class FussballvereinQueryResolver {
+    readonly #service: FussballvereinService;
 
-    readonly #logger = getLogger(fussballvereinQueryResolver.name);
+    readonly #logger = getLogger(FussballvereinQueryResolver.name);
 
-    constructor(service: fussballvereinService) {
+    constructor(service: FussballvereinService) {
         this.#service = service;
     }
 
@@ -55,51 +53,34 @@ export class fussballvereinQueryResolver {
     @Public()
     async findById(
         @Args() { id }: IdInput,
-    ): Promise<Readonly<fussballvereinMitTitelUndAbbildungen>> {
+    ): Promise<Readonly<FussballvereinMitAllen>> {
         this.#logger.debug('findById: id=%s', id);
 
-        const fussballverein: Readonly<fussballvereinMitTitelUndAbbildungen> =
-            await this.#service.findById({ id: Number(id) });
+        // Bei der Detailansicht typischerweise alle Relationen laden
+        const verein = await this.#service.findById({
+            id: Number(id),
+            mitSpielern: true,
+            mitStadion: true,
+            mitLogo: true,
+        });
 
-        this.#logger.debug('findById: fussballverein=%o', fussballverein);
-        return fussballverein;
+        this.#logger.debug('findById: verein=%o', verein);
+        return verein;
     }
 
-    @Query('buecher')
+    @Query('fussballvereine')
     @Public()
     async find(
         @Args() input: SuchparameterInput | undefined,
-    ): Promise<fussballvereinMitTitel[]> {
+    ): Promise<Readonly<FussballvereinMitBasis>[]> {
         this.#logger.debug('find: input=%s', JSON.stringify(input));
         const pageable = createPageable({});
         const suchparameter = input?.suchparameter;
-        if (suchparameter !== undefined) {
-            const { lieferbar } = suchparameter;
-            if (lieferbar !== undefined) {
-                // Boole'scher Wert bei GraphQL-Query
-                // String bei Query-Parameter bei REST
-                (suchparameter as any).lieferbar = lieferbar.toString();
-            }
-        }
-        const buecherSlice: Readonly<Slice<Readonly<fussballvereinMitTitel>>> =
-            await this.#service.find(suchparameter as any, pageable); // NOSONAR
-        this.#logger.debug('find: buecherSlice=%o', buecherSlice);
-        return buecherSlice.content;
-    }
 
-    @ResolveField('rabatt')
-    rabatt(
-        @Parent() fussballverein: fussballvereinMitTitel,
-        short: boolean | undefined,
-    ) {
-        this.#logger.debug(
-            'rabatt: fussballverein=%o, short=%s',
-            fussballverein,
-            short?.toString() ?? 'undefined',
-        );
-        // "Nullish Coalescing" ab ES2020
-        const rabatt = fussballverein.rabatt ?? BigNumber(0);
-        const shortStr = short === undefined || short ? '%' : 'Prozent';
-        return `${rabatt.toString()} ${shortStr}`;
+        const vereineSlice: Readonly<Slice<Readonly<FussballvereinMitBasis>>> =
+            await this.#service.find(suchparameter, pageable);
+
+        this.#logger.debug('find: vereineSlice=%o', vereineSlice);
+        return vereineSlice.content;
     }
 }

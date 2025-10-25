@@ -1,4 +1,5 @@
-// Copyright (C) 2021 - present Juergen Zimmermann, Hochschule Karlsruhe
+// Copyright (C) 2025 - present [Dein Name]
+// Hochschule Karlsruhe / Projekt Fussballverein
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -18,26 +19,20 @@ import { UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { IsInt, IsNumberString, Min } from 'class-validator';
 import { AuthGuard, Roles } from 'nest-keycloak-connect';
-import { getLogger } from '../../logger/logger.ts';
-import { ResponseTimeInterceptor } from '../../logger/response-time.ts';
-import { fussballvereinDTO } from '../controller/fussballverein-dto.ts';
+import { getLogger } from '../../logger/logger.js';
+import { ResponseTimeInterceptor } from '../../logger/response-time.js';
+
+import { FussballvereinDto } from '../controller/fussballverein-dto.js';
 import {
-    fussballvereinCreate,
-    fussballvereinUpdate,
-    fussballvereinWriteService,
-} from '../service/fussballverein-write-service.ts';
-import { HttpExceptionFilter } from './http-exception-filter.ts';
-import { type IdInput } from './query.ts';
+    FussballvereinWriteService,
+    type FussballvereinCreate,
+    type FussballvereinUpdate,
+} from '../service/fussballverein-write-service.js';
+import { HttpExceptionFilter } from './http-exception-filter.js';
+import { type IdInput } from './query.js';
 
 // Authentifizierung und Autorisierung durch
-//  GraphQL Shield
-//      https://www.graphql-shield.com
-//      https://github.com/maticzav/graphql-shield
-//      https://github.com/nestjs/graphql/issues/92
-//      https://github.com/maticzav/graphql-shield/issues/213
-//  GraphQL AuthZ
-//      https://github.com/AstrumU/graphql-authz
-//      https://www.the-guild.dev/blog/graphql-authz
+//  GraphQL Shield / GraphQL AuthZ (analog zum Buch-Beispiel)
 
 export type CreatePayload = {
     readonly id: number;
@@ -51,7 +46,7 @@ export type DeletePayload = {
     readonly success: boolean;
 };
 
-export class fussballvereinUpdateDTO extends fussballvereinDTO {
+export class FussballvereinUpdateDTO extends FussballvereinDto {
     @IsNumberString()
     readonly id!: string;
 
@@ -59,52 +54,50 @@ export class fussballvereinUpdateDTO extends fussballvereinDTO {
     @Min(0)
     readonly version!: number;
 }
-@Resolver('fussballverein')
+
+@Resolver('Fussballverein')
 // alternativ: globale Aktivierung der Guards https://docs.nestjs.com/security/authorization#basic-rbac-implementation
 @UseGuards(AuthGuard)
 @UseFilters(HttpExceptionFilter)
 @UseInterceptors(ResponseTimeInterceptor)
-export class fussballvereinMutationResolver {
-    readonly #service: fussballvereinWriteService;
+export class FussballvereinMutationResolver {
+    readonly #service: FussballvereinWriteService;
 
-    readonly #logger = getLogger(fussballvereinMutationResolver.name);
+    readonly #logger = getLogger(FussballvereinMutationResolver.name);
 
-    constructor(service: fussballvereinWriteService) {
+    constructor(service: FussballvereinWriteService) {
         this.#service = service;
     }
 
     @Mutation()
     @Roles('admin', 'user')
-    async create(@Args('input') fussballvereinDTO: fussballvereinDTO) {
-        this.#logger.debug('create: fussballvereinDTO=%o', fussballvereinDTO);
+    async create(@Args('input') dto: FussballvereinDto) {
+        this.#logger.debug('create: dto=%o', dto);
 
-        const fussballverein =
-            this.#fussballvereinDtoTofussballvereinCreate(fussballvereinDTO);
-        const id = await this.#service.create(fussballverein);
-        this.#logger.debug('createfussballverein: id=%d', id);
+        const verein = this.#dtoToCreate(dto);
+        const id = await this.#service.create(verein);
+
+        this.#logger.debug('createFussballverein: id=%d', id);
         const payload: CreatePayload = { id };
         return payload;
     }
 
     @Mutation()
     @Roles('admin', 'user')
-    async update(@Args('input') fussballvereinDTO: fussballvereinUpdateDTO) {
-        this.#logger.debug('update: fussballverein=%o', fussballvereinDTO);
+    async update(@Args('input') dto: FussballvereinUpdateDTO) {
+        this.#logger.debug('update: dto=%o', dto);
 
-        const fussballverein =
-            this.#fussballvereinUpdateDtoTofussballvereinUpdate(
-                fussballvereinDTO,
-            );
-        const versionStr = `"${fussballvereinDTO.version.toString()}"`;
+        const verein = this.#dtoToUpdate(dto);
+        const versionStr = `"${dto.version.toString()}"`;
 
         const versionResult = await this.#service.update({
-            id: Number.parseInt(fussballvereinDTO.id, 10),
-            fussballverein,
+            id: Number.parseInt(dto.id, 10),
+            verein,
             version: versionStr,
         });
-        // TODO BadUserInputError
+
         this.#logger.debug(
-            'updatefussballverein: versionResult=%d',
+            'updateFussballverein: versionResult=%d',
             versionResult,
         );
         const payload: UpdatePayload = { version: versionResult };
@@ -116,85 +109,75 @@ export class fussballvereinMutationResolver {
     async delete(@Args() id: IdInput) {
         const idValue = id.id;
         this.#logger.debug('delete: idValue=%s', idValue);
+
         await this.#service.delete(Number(idValue));
         const payload: DeletePayload = { success: true };
         return payload;
     }
 
-    #fussballvereinDtoTofussballvereinCreate(
-        fussballvereinDTO: fussballvereinDTO,
-    ): fussballvereinCreate {
-        // "Optional Chaining" ab ES2020
-        const abbildungen = fussballvereinDTO.abbildungen?.map((spielerDTO) => {
-            const abbildung = {
-                beschriftung: spielerDTO.beschriftung,
-                contentType: spielerDTO.contentType,
-            };
-            return abbildung;
-        });
-        const fussballverein: fussballvereinCreate = {
+    // -------------------------------------------------------------------------
+    // Mapping-Helper
+    // -------------------------------------------------------------------------
+
+    #dtoToCreate(dto: FussballvereinDto): FussballvereinCreate {
+        // Nested Create für Stadion (optional)
+        const stadionCreate =
+            dto.stadion === undefined
+                ? undefined
+                : {
+                      create: {
+                          stadt: dto.stadion.stadt,
+                          strasse: dto.stadion.strasse ?? null,
+                          hausnummer: dto.stadion.hausnummer ?? null,
+                          kapazitaet: dto.stadion.kapazitaet,
+                      },
+                  };
+
+        // Nested Create für Spieler (optional)
+        const spielerCreate =
+            dto.spieler === undefined
+                ? undefined
+                : {
+                      create: dto.spieler.map((s) => ({
+                          vorname: s.vorname,
+                          nachname: s.nachname,
+                          alter: s.alter ?? null,
+                          // In deinem Prisma-Client heißt es laut Fehlermeldungen `starkerFuss` (camelCase)
+                          starkerFuss: s.starkerFuss ?? null,
+                      })),
+                  };
+
+        const verein: FussballvereinCreate = {
             version: 0,
-            isbn: fussballvereinDTO.isbn,
-            rating: fussballvereinDTO.rating,
-            art: fussballvereinDTO.art ?? null,
-            preis: fussballvereinDTO.preis.toNumber(),
-            rabatt: fussballvereinDTO.rabatt?.toNumber() ?? 0,
-            lieferbar: fussballvereinDTO.lieferbar ?? false,
-            datum: fussballvereinDTO.datum ?? null,
-            homepage: fussballvereinDTO.homepage ?? null,
-            schlagwoerter: fussballvereinDTO.schlagwoerter ?? [],
-            titel: {
-                create: {
-                    titel: fussballvereinDTO.titel.titel,
-                    untertitel: fussballvereinDTO.titel.untertitel ?? null,
-                },
-            },
-            abbildungen: { create: abbildungen ?? [] },
+            name: dto.name,
+            gruendungsdatum: dto.gruendungsdatum ?? null,
+            website: dto.website ?? null,
+            email: dto.email ?? null,
+            telefonnummer: dto.telefonnummer ?? null,
+            mitgliederanzahl:
+                dto.mitgliederanzahl !== undefined
+                    ? Number(dto.mitgliederanzahl)
+                    : null,
+            ...(stadionCreate !== undefined ? { stadion: stadionCreate } : {}),
+            ...(spielerCreate !== undefined ? { spieler: spielerCreate } : {}),
         };
-        return fussballverein;
+        return verein;
     }
 
-    #fussballvereinUpdateDtoTofussballvereinUpdate(
-        fussballvereinDTO: fussballvereinUpdateDTO,
-    ): fussballvereinUpdate {
-        return {
-            isbn: fussballvereinDTO.isbn,
-            rating: fussballvereinDTO.rating,
-            art: fussballvereinDTO.art ?? null,
-            preis: fussballvereinDTO.preis.toNumber(),
-            rabatt: fussballvereinDTO.rabatt?.toNumber() ?? 0,
-            lieferbar: fussballvereinDTO.lieferbar ?? false,
-            datum: fussballvereinDTO.datum ?? null,
-            homepage: fussballvereinDTO.homepage ?? null,
-            schlagwoerter: fussballvereinDTO.schlagwoerter ?? [],
+    #dtoToUpdate(dto: FussballvereinUpdateDTO): FussballvereinUpdate {
+        // Hinweis: Nested Updates (stadion/spieler) sind hier bewusst nicht enthalten.
+        // Wenn benötigt, kann man sie analog mit `upsert/update/create/deleteMany` ergänzen.
+        const verein: FussballvereinUpdate = {
+            name: dto.name,
+            gruendungsdatum: dto.gruendungsdatum ?? null,
+            website: dto.website ?? null,
+            email: dto.email ?? null,
+            telefonnummer: dto.telefonnummer ?? null,
+            mitgliederanzahl:
+                dto.mitgliederanzahl !== undefined
+                    ? Number(dto.mitgliederanzahl)
+                    : null,
         };
+        return verein;
     }
-
-    // #errorMsgCreatefussballverein(err: CreateError) {
-    //     switch (err.type) {
-    //         case 'IsbnExists': {
-    //             return `Die ISBN ${err.isbn} existiert bereits`;
-    //         }
-    //         default: {
-    //             return 'Unbekannter Fehler';
-    //         }
-    //     }
-    // }
-
-    // #errorMsgUpdatefussballverein(err: UpdateError) {
-    //     switch (err.type) {
-    //         case 'fussballvereinNotExists': {
-    //             return `Es gibt kein fussballverein mit der ID ${err.id}`;
-    //         }
-    //         case 'VersionInvalid': {
-    //             return `"${err.version}" ist keine gueltige Versionsnummer`;
-    //         }
-    //         case 'VersionOutdated': {
-    //             return `Die Versionsnummer "${err.version}" ist nicht mehr aktuell`;
-    //         }
-    //         default: {
-    //             return 'Unbekannter Fehler';
-    //         }
-    //     }
-    // }
 }
