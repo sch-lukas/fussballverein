@@ -27,4 +27,5 @@ export const suchparameterNamen = [
     'liga',
     'ort',
     'land',
+    'schlagwoerter',
 ];

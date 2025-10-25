@@ -22,7 +22,6 @@ model Fussballverein {
   mitgliederanzahl Int?
   logo             String?
   version          Int       @default(0)
-  logo             String?
   erzeugt          DateTime  @default(now()) @db.Timestamp(6)
   aktualisiert     DateTime  @default(now()) @updatedAt @db.Timestamp(6)
   spieler          Spieler[]

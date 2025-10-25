@@ -9,8 +9,8 @@ import {
     Prisma,
     PrismaClient,
 } from '../../generated/prisma/client.ts';
-import { type FussballvereinInclude } from '../../generated/prisma/models/Fussballverein.js';
-import { getLogger } from '../../logger/logger.js';
+import { type FussballvereinInclude } from '../../generated/prisma/models/Fussballverein.ts';
+import { getLogger } from '../../logger/logger.ts';
 import { type Pageable } from './pageable.ts';
 import { PrismaService } from './prisma-service.ts';
 import { type Slice } from './slice.ts';
