@@ -40,7 +40,7 @@ type FussballvereinCreated = Prisma.FussballvereinGetPayload<{
     include: {
         spieler: true;
         stadion: true;
-        logo_file: true; // snake_case!
+        logoFile: true; // snake_case!
     };
 }>;
 
@@ -59,8 +59,8 @@ export type UpdateParams = {
 type FussballvereinUpdated = Prisma.FussballvereinGetPayload<{}>;
 
 // snake_case-Typen aus Prisma
-type LogoFileCreate = Prisma.logo_fileUncheckedCreateInput;
-export type LogoFileCreated = Prisma.logo_fileGetPayload<{}>;
+type LogoFileCreate = Prisma.LogoFileUncheckedCreateInput;
+export type LogoFileCreated = Prisma.LogoFileGetPayload<{}>;
 
 /**
  * Die Klasse `FussballvereinWriteService` implementiert den Anwendungskern für das
@@ -103,7 +103,7 @@ export class FussballvereinWriteService {
         await this.#prisma.$transaction(async (tx) => {
             vereinDb = await tx.fussballverein.create({
                 data: verein,
-                include: { spieler: true, stadion: true, logo_file: true }, // snake_case!
+                include: { spieler: true, stadion: true, logoFile: true }, // snake_case!
             });
         });
 
@@ -122,7 +122,7 @@ export class FussballvereinWriteService {
      * @param data Bytes der Datei als Buffer (Node)
      * @param filename Dateiname
      * @param size Dateigröße in Bytes
-     * @returns Entity-Objekt für `logo_file`
+     * @returns Entity-Objekt für `logoFile`
      */
     // eslint-disable-next-line max-params
     async addFile(
@@ -157,8 +157,8 @@ export class FussballvereinWriteService {
             }
 
             // evtl. vorhandene Datei löschen (1:1)
-            await tx.logo_file.deleteMany({
-                where: { fussballverein_id: fussballvereinId }, // <-- snake_case
+            await tx.logoFile.deleteMany({
+                where: { fussballvereinId: fussballvereinId }, // <-- snake_case
             });
 
             const fileType = await fileTypeFromBuffer(data);
@@ -169,9 +169,9 @@ export class FussballvereinWriteService {
                 filename,
                 data,
                 mimetype,
-                fussballverein_id: fussballvereinId, // <-- snake_case
+                fussballvereinId: fussballvereinId, // <-- snake_case
             };
-            logoCreated = await tx.logo_file.create({ data: logo });
+            logoCreated = await tx.logoFile.create({ data: logo });
         });
 
         this.#logger.debug(
