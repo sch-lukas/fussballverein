@@ -37,8 +37,8 @@ import { Public } from 'nest-keycloak-connect';
 import { paths } from '../../config/paths.js';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
-import { type Fussballverein } from '../entity/fussballverein.js';
 import { FussballvereinService } from '../service/fussballverein-service.js';
+import { Fussballverein } from '../../generated/prisma/client.ts';
 
 /**
  * Controller-Klasse für `Fussballverein`.
