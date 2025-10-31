@@ -167,7 +167,7 @@ export class FussballvereinWriteService {
 
             const logo: LogoFileCreate = {
                 filename,
-                data,
+                data: Buffer.from(data),
                 mimetype,
                 fussballvereinId: fussballvereinId, // <-- snake_case
             };
