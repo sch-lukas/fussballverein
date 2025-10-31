@@ -24,7 +24,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { AdminModule } from './admin/module.js';
 import { DevModule } from './config/dev/module.js';
 import { graphQlModuleOptions } from './config/graphql.js';
-import { FussballvereinController } from './fussballverein/controller/fussballverein-controller.js';
+import { FussballvereinGetController } from './fussballverein/controller/fussballverein-controller.js';
 import { FussballvereinWriteController } from './fussballverein/controller/fussballverein-write-controller.js';
 import { FussballvereinModule } from './fussballverein/module.ts';
 import { LoggerModule } from './logger/module.js';
@@ -48,7 +48,7 @@ export class AppModule implements NestModule {
         consumer
             .apply(RequestLoggerMiddleware)
             .forRoutes(
-                FussballvereinController,
+                FussballvereinGetController,
                 FussballvereinWriteController,
                 'auth',
                 'graphql',
