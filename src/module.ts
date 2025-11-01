@@ -26,7 +26,7 @@ import { DevModule } from './config/dev/module.js';
 import { graphQlModuleOptions } from './config/graphql.js';
 import { FussballvereinGetController } from './fussballverein/controller/fussballverein-controller.js';
 import { FussballvereinWriteController } from './fussballverein/controller/fussballverein-write-controller.js';
-import { FussballvereinModule } from './fussballverein/module.ts';
+import { FussballvereinModule } from './fussballverein/module.js';
 import { LoggerModule } from './logger/module.js';
 import { RequestLoggerMiddleware } from './logger/request-logger.js';
 import { KeycloakModule } from './security/keycloak/module.js';

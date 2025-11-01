@@ -27,7 +27,7 @@ import { Public } from 'nest-keycloak-connect';
 import { paths } from '../../config/paths.js';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
-import { FussballvereinDto } from '../controller/fussballverein-dto.ts';
+import { FussballvereinDto } from '../controller/fussballverein-dto.js';
 import { FussballvereinService } from '../service/fussballverein-service.js';
 import { createPageable } from '../service/pageable.js';
 import { type Suchparameter } from '../service/suchparameter.js';

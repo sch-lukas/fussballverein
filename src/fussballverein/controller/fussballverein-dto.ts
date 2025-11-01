@@ -16,8 +16,8 @@ import {
     Min,
     ValidateNested,
 } from 'class-validator';
-import { SpielerDto } from './spieler-dto.ts';
-import { StadionDto } from './stadion-dto.ts';
+import { SpielerDto } from './spieler-dto.js';
+import { StadionDto } from './stadion-dto.js';
 
 /**
  * Basis-DTO für einen Fussballverein, ohne die zugehörigen

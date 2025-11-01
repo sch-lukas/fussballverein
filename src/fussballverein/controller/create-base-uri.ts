@@ -19,8 +19,8 @@
  */
 
 import { type Request } from 'express';
-import { nodeConfig } from '../../config/node.ts';
-import { FussballvereinService } from '../service/fussballverein-service.ts';
+import { nodeConfig } from '../../config/node.js';
+import { FussballvereinService } from '../service/fussballverein-service.js';
 
 const port = `:${nodeConfig.port}`;
 
