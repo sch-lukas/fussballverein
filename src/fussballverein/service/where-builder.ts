@@ -21,9 +21,9 @@
 
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../../generated/prisma/client.js';
-import { type FussballvereinWhereInput } from '../../generated/prisma/models/Fussballverein.js';
 import { getLogger } from '../../logger/logger.js';
 import { type Suchparameter } from './suchparameter.js';
+type FussballvereinWhereInput = Prisma.FussballvereinWhereInput;
 
 /**
  * Die Klasse `WhereBuilder` baut die WHERE-Klausel für DB-Anfragen mit _Prisma_.
@@ -53,7 +53,7 @@ export class WhereBuilder {
         let where: FussballvereinWhereInput = {};
 
         // Alle Parameter iterieren
-        Object.entries(suchparameter ?? {}).forEach(([key, value]) => {
+        for (const [key, value] of Object.entries(suchparameter ?? {})) {
             switch (key) {
                 case 'name':
                     where.name = {
@@ -118,7 +118,7 @@ export class WhereBuilder {
                     this.#logger.debug('Unbekannter Suchparameter: %s', key);
                     break;
             }
-        });
+        }
 
         this.#logger.debug('build: where=%o', where);
         return where;

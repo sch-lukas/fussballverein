@@ -41,6 +41,7 @@ type FindByIdParams = {
 
 @Injectable()
 export class FussballvereinService {
+    static readonly ID_PATTERN: RegExp = /^\d+$/;
     readonly #prisma: PrismaClient;
     readonly #whereBuilder: WhereBuilder;
 
@@ -126,7 +127,7 @@ export class FussballvereinService {
      * Vereine asynchron suchen (mit Paginierung und Filter).
      */
     async find(
-        suchparameter: Suchparameter,
+        suchparameter: Suchparameter = {},
         pageable: Pageable,
     ): Promise<Readonly<Slice<Readonly<FussballvereinMitBasis>>>> {
         this.#logger.debug(
@@ -221,17 +222,16 @@ export class FussballvereinService {
     #checkKeys(keys: string[]): boolean {
         this.#logger.debug('#checkKeys: keys=%o', keys);
         let validKeys = true;
-        keys.forEach((key) => {
-            // Prüft, ob der Schlüssel ein gültiger Suchparameter ist
+        for (const key of keys) {
             if (!suchparameterNamen.includes(key as any)) {
-                // 'as any' zur Typ-Umgehung
                 this.#logger.debug(
                     '#checkKeys: ungueltiger Suchparameter "%s"',
                     key,
                 );
                 validKeys = false;
             }
-        });
+        }
+
         return validKeys;
     }
 
