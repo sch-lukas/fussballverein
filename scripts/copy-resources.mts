@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <https://www.gnu.org/licenses/>.
  */
-import { cpSync, existsSync, mkdirSync } from 'node:fs';
+/* import { cpSync, existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 
 // BEACHTE: "assets" innerhalb von nest-cli.json werden bei "--watch" NICHT beruecksichtigt
@@ -31,3 +31,37 @@ const resourcesSrc = join(src, 'config', 'resources');
 const resourcesDist = join(dist, src, 'config', 'resources');
 mkdirSync(resourcesDist, { recursive: true });
 cpSync(resourcesSrc, resourcesDist, { recursive: true });
+ */
+
+// scripts/copy-resources.mts
+import { cpSync, existsSync, mkdirSync } from 'node:fs';
+import { join } from 'node:path';
+
+const SRC = 'src';
+const DIST = 'dist';
+
+function ensureDir(p: string) {
+    if (!existsSync(p)) mkdirSync(p, { recursive: true });
+}
+
+function copyDir(srcRel: string, distRel: string) {
+    const from = join(SRC, srcRel);
+    const to = join(DIST, distRel);
+    if (!existsSync(from)) {
+        console.log(`[copy-resources] Skip: ${from} nicht vorhanden.`);
+        return;
+    }
+    ensureDir(to);
+    cpSync(from, to, { recursive: true });
+    console.log(`[copy-resources] Kopiert: ${from} -> ${to}`);
+}
+
+function main() {
+    ensureDir(DIST);
+    // wie im Vorbild:
+    copyDir(join('config', 'resources'), join(SRC, 'config', 'resources'));
+    // NEU: Prisma-Client
+    copyDir(join('generated', 'prisma'), join('generated', 'prisma'));
+}
+
+main();
