@@ -1,127 +1,150 @@
-# Copyright (C) 2021 - present Juergen Zimmermann, Hochschule Karlsruhe
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
-# siehe app.module.ts
-
+# ----------------------------------------------------------------------
+# Schema-Definition
+# ----------------------------------------------------------------------
 schema {
   query: Query
   mutation: Mutation
 }
 
-"Funktionen, um Bücherdaten zu lesen"
+# ----------------------------------------------------------------------
+# LESE-OPERATIONEN (Behebt deinen Fehler)
+# ----------------------------------------------------------------------
+"Funktionen, um Vereinsdaten zu lesen"
 type Query {
-  buecher(suchparameter: SuchparameterInput): [Buch!]
+  "Sucht mehrere Vereine anhand von Suchparametern"
+  fussballvereine(
+    suchparameter: FussballvereinSuchparameterInput
+  ): [Fussballverein!]
 
-  buch(id: ID!): Buch
+  "Sucht einen einzelnen Verein anhand seiner ID"
+  fussballverein(id: ID!): Fussballverein
 }
 
-"Funktionen, um Bücher neu anzulegen, zu aktualisieren oder zu löschen"
+# ----------------------------------------------------------------------
+# SCHREIB-OPERATIONEN
+# ----------------------------------------------------------------------
+"Funktionen, um Vereine neu anzulegen, zu aktualisieren oder zu löschen"
 type Mutation {
-  create(input: BuchInput!): CreatePayload
+  "Legt einen neuen Fussballverein an"
+  create(input: FussballvereinInput!): CreatePayload
 
-  update(input: BuchUpdateInput!): UpdatePayload
+  "Aktualisiert einen bestehenden Fussballverein"
+  update(input: FussballvereinUpdateInput!): UpdatePayload
 
+  "Löscht einen Fussballverein anhand seiner ID"
   delete(id: ID!): DeletePayload
 
-  token(username: String!, password: String!): TokenPayload # Mutation, wenn z.B. der Login-Zeitpunkt im IDM-System gespeichert wird
+  # Auth-Mutationen
+  token(username: String!, password: String!): TokenPayload
   refresh(refreshToken: String!): TokenPayload
 }
 
-"Daten zum Titel eines Buches"
-type Titel {
-  titel: String! # eslint-disable-line @graphql-eslint/no-typename-prefix
-  untertitel: String
+# ----------------------------------------------------------------------
+# OBJEKT-TYPEN (Das Senden wir an den Client)
+# ----------------------------------------------------------------------
+
+"Daten zum Stadion eines Vereins (1:1-Beziehung)"
+type Stadion {
+  id: ID!
+  stadt: String!
+  kapazitaet: Int!
+  strasse: String
+  hausnummer: String
 }
 
-"Datenschema zu einem Buch, das gelesen wird"
-type Buch {
-  id: ID! # ID ist bei Apollo ein String
+"Daten zu einem Spieler (Teil der 1:n-Beziehung)"
+type Spieler {
+  id: ID!
+  vorname: String!
+  nachname: String!
+  alter: Int
+  starkerFuss: String
+}
+
+"Datenschema zu einem Fussballverein, der gelesen wird"
+type Fussballverein {
+  id: ID!
   version: Int!
-  isbn: String!
-  rating: Int
-  art: Art
-  preis: Float!
-  lieferbar: Boolean
-  datum: String
-  homepage: String
-  schlagwoerter: [String]
-  titel: Titel! # 1:1-Beziehung
-  rabatt(short: Boolean): String! # field mit @ResolveField
+  name: String!
+  gruendungsdatum: String
+  website: String
+  email: String
+  telefonnummer: String
+  mitgliederanzahl: Int
+
+  "1:1-Beziehung zum Stadion"
+  stadion: Stadion
+
+  "1:n-Beziehung zu den Spielern"
+  spieler: [Spieler!]
+
+  # Das Logo (bytea) wird über den REST-Endpunkt (GET /rest/logo/:id)
+  # ausgeliefert und ist daher nicht Teil des GraphQL-Schemas.
 }
 
-"Enum-Typ für die Art eines Buches"
-enum Art {
-  EPUB
-  HARDCOVER
-  PAPERBACK
+# ----------------------------------------------------------------------
+# INPUT-TYPEN (Das Empfangen wir vom Client)
+# ----------------------------------------------------------------------
+
+"Suchparameter für die Vereinssuche (Query)"
+input FussballvereinSuchparameterInput {
+  name: String
+  mitgliederanzahl: Int
+  # Du kannst hier weitere Filter hinzufügen, z.B. stadt aus Stadion
 }
 
-"Suchparameter für Bücher"
-input SuchparameterInput {
-  titel: String
-  isbn: String
-  rating: Int
-  art: Art
-  lieferbar: Boolean
+"Daten für ein neues Stadion (Teil von FussballvereinInput)"
+input StadionInput {
+  stadt: String!
+  kapazitaet: Int!
+  strasse: String
+  hausnummer: String
 }
 
-"Daten zum Titel eines neuen Buches"
-input TitelInput {
-  titel: String!
-  untertitel: String
+"Daten für einen neuen Spieler (Teil von FussballvereinInput)"
+input SpielerInput {
+  vorname: String!
+  nachname: String!
+  alter: Int
+  starkerFuss: String
 }
 
-"Daten zu den Abbildungen eines Buches"
-input AbbildungInput {
-  beschriftung: String!
-  contentType: String!
+"Daten für einen neuen Fussballverein (Mutation)"
+input FussballvereinInput {
+  name: String!
+  gruendungsdatum: String
+  website: String
+  email: String
+  telefonnummer: String
+  mitgliederanzahl: Int
+
+  "Optionale 1:1-Beziehung beim Erstellen"
+  stadion: StadionInput
+
+  "Optionale 1:n-Beziehung beim Erstellen"
+  spieler: [SpielerInput!]
 }
 
-"Daten für ein neues Buch"
-input BuchInput {
-  isbn: String
-  rating: Int
-  art: Art
-  preis: Float
-  rabatt: Float
-  lieferbar: Boolean
-  datum: String
-  homepage: String
-  schlagwoerter: [String]
-  titel: TitelInput!
-  abbildungen: [AbbildungInput!]
+"Daten für ein zu änderndes Buch (Mutation)"
+input FussballvereinUpdateInput {
+  # ID und Version kommen aus Param/Header, nicht aus dem Body
+  name: String
+  gruendungsdatum: String
+  website: String
+  email: String
+  telefonnummer: String
+  mitgliederanzahl: Int
+  # Das Ändern von Relationen (Stadion/Spieler) wird hier
+  # der Einfachheit halber weggelassen
 }
+
+# ----------------------------------------------------------------------
+# PAYLOAD-TYPEN (Generische Antworten)
+# ----------------------------------------------------------------------
 
 "Generierte ID bei erfolgreichem Neuanlegen"
 type CreatePayload {
   id: ID
-}
-
-"Daten für ein zu änderndes Buch"
-input BuchUpdateInput {
-  id: ID
-  version: Int
-  isbn: String
-  rating: Int
-  art: Art
-  preis: Float
-  rabatt: Float
-  lieferbar: Boolean
-  datum: String
-  homepage: String
-  schlagwoerter: [String]
 }
 
 "Neue Versionsnummer als Resultat bei erfolgreichem Aktualisieren"
@@ -134,10 +157,10 @@ type DeletePayload {
   success: Boolean
 }
 
-"Access- und Refresh-Token einschliesslich Ablauf-Zeitstempel"
+"Access- und Refresh-Token (Auth)"
 type TokenPayload {
-  access_token: String! # eslint-disable-line @graphql-eslint/naming-convention
-  expires_in: Int! # eslint-disable-line @graphql-eslint/naming-convention
-  refresh_token: String! # eslint-disable-line @graphql-eslint/naming-convention
-  refresh_expires_in: Int! # eslint-disable-line @graphql-eslint/naming-convention
+  access_token: String!
+  expires_in: Int!
+  refresh_token: String!
+  refresh_expires_in: Int!
 }
