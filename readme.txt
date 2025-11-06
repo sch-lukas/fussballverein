@@ -1,5 +1,3 @@
-HAllo von LUkas
-Hallo von Leon
+SWE - Abgabe 2
 
-Hallo von AAAAROn
-Hellooo
+Gruppe 06
