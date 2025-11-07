@@ -37,8 +37,8 @@ ARG NODE_VERSION=24.9.0
 # ---------------------------------------------------------------------------------------
 # S t a g e   d i s t
 # ---------------------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-trixie-slim AS dist
-
+#FROM node:${NODE_VERSION}-trixie-slim AS dist
+FROM node:24.9.0-alpine3.22 AS dist
 # ggf. Python fuer pg
 # https://packages.debian.org/trixie/python3.12-minimal
 # "python3-dev" enthaelt "multiprocessing"
@@ -74,7 +74,6 @@ WORKDIR /home/node
 # https://docs.docker.com/engine/reference/builder/#run---mounttypebind
 RUN --mount=type=bind,source=package.json,target=package.json \
   --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-  --mount=type=bind,source=nest-cli.json,target=nest-cli.json \
   --mount=type=bind,source=tsconfig.json,target=tsconfig.json \
   --mount=type=bind,source=tsconfig.build.json,target=tsconfig.build.json \
   --mount=type=bind,source=src,target=src \
@@ -84,6 +83,7 @@ set -eux
 pnpm i --prefer-frozen-lockfile
 pnpm run build
 EOF
+
 
 # ------------------------------------------------------------------------------
 # S t a g e   d e p e n d e n c i e s
@@ -136,7 +136,7 @@ LABEL org.opencontainers.image.title="fussballverein" \
   org.opencontainers.image.description="Appserver fussballverein mit Basis-Image Debian Trixie" \
   org.opencontainers.image.version="2025.10.1-trixie" \
   org.opencontainers.image.licenses="GPL-3.0-or-later" \
-  org.opencontainers.image.authors="Juergen.Zimmermann@h-ka.de"
+  org.opencontainers.image.authors="jule1011@h-ka.de"
 
 RUN <<EOF
 set -eux
