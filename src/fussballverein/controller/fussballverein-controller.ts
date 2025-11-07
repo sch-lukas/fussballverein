@@ -23,7 +23,7 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import { type Request, type Response } from 'express';
-import { Public } from 'nest-keycloak-connect';
+import { Public, Roles } from 'nest-keycloak-connect';
 import { paths } from '../../config/paths.js';
 import { getLogger } from '../../logger/logger.js';
 import { ResponseTimeInterceptor } from '../../logger/response-time.js';
@@ -72,7 +72,7 @@ export class FussballvereinGetController {
      */
     // eslint-disable-next-line max-params
     @Get(':id')
-    @Public()
+    @Roles('admin', 'user')
     @ApiOperation({ summary: 'Suche mit der ID des Fussballvereins' })
     @ApiParam({ name: 'id', description: 'Z.B. 1' })
     @ApiHeader({

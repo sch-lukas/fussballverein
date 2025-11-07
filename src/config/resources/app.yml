@@ -34,7 +34,7 @@ db:
 keycloak:
   #schema: https
   host: localhost
-  port: 8843
+  port: 8880
   #realm: nest
   # siehe Keycloak Menuepunkt "Clients" > Tab "Clients list" > Spalte "Client ID"
   #clientId: nest-client
