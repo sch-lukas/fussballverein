@@ -1,106 +1,143 @@
-// Copyright (C) 2025 - present Juergen Zimmermann, Hochschule Karlsruhe
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-// Tests mit
-//  * Vitest    https://vitest.dev
-//  * jest      https://jestjs.io
-//  * Mocha     https://mochajs.org
-//  * node:test ab Node 18
-
-// Alternativen zu fetch aus ES 2015:
-// https://fetch.spec.whatwg.org
-// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
-//    axios       https://axios-http.com/
-//    got         https://github.com/sindresorhus/got
-//    needle      https://github.com/tomas/needle
-//    ky          https://github.com/sindresorhus/ky
+// src/fussballverein/rest/fussballverein-get-by-id.test.ts
 
 import { HttpStatus } from '@nestjs/common';
-import { describe, expect, test } from 'vitest';
-import { CONTENT_TYPE, IF_NONE_MATCH, restURL } from '../constants.mjs';
+import { beforeAll, describe, expect, test } from 'vitest';
+import {
+    AUTHORIZATION,
+    BEARER,
+    CONTENT_TYPE,
+    IF_NONE_MATCH,
+    restURL,
+} from '../constants.mjs';
+import { getToken } from '../token.mjs'; // Annahme: Wird importiert
 
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const ids = [1, 20];
+// IDs 1 und 2 sind vorhanden (FC Bayern München, TSG Hoffenheim)
+const idsVorhanden = [1, 2];
 const idNichtVorhanden = 999999;
-const idsETag = [1, 20];
-const idFalsch = 'xy';
+const idFalsch = 'xyz';
 
 // -----------------------------------------------------------------------------
 // T e s t s
 // -----------------------------------------------------------------------------
-// Test-Suite
-describe('GET /rest/:id', () => {
-    test.concurrent.each(ids)('Buch zu vorhandener ID %i', async (id) => {
-        // given
-        const url = `${restURL}/${id}`;
+describe('GET /rest/fussballvereine/:id (Lesen)', () => {
+    let tokenUser: string; // Token wird fuer alle Lese-Tests benötigt, da @Roles('admin', 'user')
 
-        // when
-        const response = await fetch(url);
-        const { status, headers } = response;
-
-        // then
-        expect(status).toBe(HttpStatus.OK);
-        expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
-
-        const body = (await response.json()) as { id: number };
-
-        expect(body.id).toBe(id);
+    beforeAll(async () => {
+        // Token mit der Rolle 'user' abrufen
+        tokenUser = await getToken('user', 'p');
     });
 
-    test.concurrent('Kein Buch zu nicht-vorhandener ID', async () => {
-        // given
-        const url = `${restURL}/${idNichtVorhanden}`;
-
-        // when
-        const { status } = await fetch(url);
-
-        // then
-        expect(status).toBe(HttpStatus.NOT_FOUND);
-    });
-
-    test.concurrent('Kein Buch zu falscher ID', async () => {
-        // given
-        const url = `${restURL}/${idFalsch}`;
-
-        // when
-        const { status } = await fetch(url);
-
-        // then
-        expect(status).toBe(HttpStatus.NOT_FOUND);
-    });
-
-    test.concurrent.each(idsETag)(
-        'Buch zu ID %i mit If-None-Match',
+    test.concurrent.each(idsVorhanden)(
+        'Verein zu vorhandener ID %i abrufen (200 OK)',
         async (id) => {
             // given
             const url = `${restURL}/${id}`;
             const headers = new Headers();
-            headers.append(IF_NONE_MATCH, '"0"');
+            // Auth-Header hinzufügen, um 401 Unauthorized zu verhindern
+            headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
 
             // when
             const response = await fetch(url, { headers });
+            const { status, headers: responseHeaders } = response;
+
+            // then
+            expect(status).toBe(HttpStatus.OK);
+            expect(responseHeaders.get(CONTENT_TYPE)).toMatch(/json/iu);
+            expect(responseHeaders.get('ETag')).toBeDefined();
+
+            const body = (await response.json()) as { id: number };
+            expect(body.id).toBe(id);
+        },
+    );
+
+    test.concurrent(
+        'Kein Verein zu nicht-vorhandener ID (404 Not Found)',
+        async () => {
+            // given
+            const url = `${restURL}/${idNichtVorhanden}`;
+            const headers = new Headers();
+            headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+
+            // when
+            const { status } = await fetch(url, { headers });
+
+            // then
+            expect(status).toBe(HttpStatus.NOT_FOUND);
+        },
+    );
+
+    test.concurrent('Kein Verein zu falscher ID (404 Not Found)', async () => {
+        // given
+        const url = `${restURL}/${idFalsch}`;
+        const headers = new Headers();
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+
+        // when
+        const { status } = await fetch(url, { headers });
+
+        // then
+        // Erwartet 404, da die ParseIntPipe fehlschlaegt
+        expect(status).toBe(HttpStatus.NOT_FOUND);
+    });
+
+    test.concurrent.each(idsVorhanden)(
+        'Verein zu ID %i mit korrekter If-None-Match Version (304 Not Modified)',
+        async (id) => {
+            // given
+            const url = `${restURL}/${id}`;
+
+            // 1. Zuerst aktuelle Version mit Auth abrufen
+            const authHeaders = new Headers();
+            authHeaders.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+            const initialResponse = await fetch(url, { headers: authHeaders });
+
+            // Wenn der Token korrekt ist, sollte 200 OK kommen
+            expect(initialResponse.status).toBe(HttpStatus.OK);
+            const actualETag = initialResponse.headers.get('ETag');
+            expect(actualETag).toBeDefined();
+
+            // 2. Erneuten Request mit If-None-Match und Auth senden
+            const requestHeaders = new Headers();
+            requestHeaders.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+            // Header: If-None-Match mit dem gerade erhaltenen ETag
+            requestHeaders.append(IF_NONE_MATCH, actualETag as string);
+
+            // when
+            const response = await fetch(url, { headers: requestHeaders });
             const { status } = response;
 
             // then
+            // Erwartet 304, da If-None-Match = ETag
             expect(status).toBe(HttpStatus.NOT_MODIFIED);
-
             const body = await response.text();
-
             expect(body).toBe('');
+        },
+    );
+
+    test.concurrent.each(idsVorhanden)(
+        'Verein zu ID %i mit falscher If-None-Match Version (200 OK)',
+        async (id) => {
+            // given
+            const url = `${restURL}/${id}`;
+            const headers = new Headers();
+            headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+            // Version "0" ist absichtlich falsch, um 200 OK zu erzwingen
+            headers.append(IF_NONE_MATCH, '"0"');
+
+            // when
+            const { status, headers: resultHeaders } = await fetch(url, {
+                headers,
+            });
+
+            // then
+            // Erwartet 200 OK, da der ETag "1" (aus DB) NICHT mit "0" übereinstimmt
+            expect(status).toBe(HttpStatus.OK);
+            expect(resultHeaders.get('ETag')).toBeDefined();
+            // Erwartet, dass der neue (aktuelle) ETag zurückkommt
+            expect(resultHeaders.get('ETag')).toBe('"1"');
         },
     );
 });

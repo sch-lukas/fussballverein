@@ -1,23 +1,10 @@
-// Copyright (C) 2016 - present Juergen Zimmermann, Hochschule Karlsruhe
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// src/fussballverein/rest/fussballverein-post.test.ts (Final & Korrigiert)
 
 import { HttpStatus } from '@nestjs/common';
-import BigNumber from 'bignumber.js';
 import { beforeAll, describe, expect, test } from 'vitest';
-import { type BuchDTO } from '../../../src/buch/controller/buch-dto.js';
-import { BuchService } from '../../../src/buch/service/buch-service.js';
+import { type FussballvereinDto } from '../../../src/fussballverein/controller/fussballverein-dto.js';
+// KORREKTUR: Importiere FussballvereinService, um auf ID_PATTERN zugreifen zu können
+import { FussballvereinService } from '../../../src/fussballverein/service/fussballverein-service.js';
 import {
     APPLICATION_JSON,
     AUTHORIZATION,
@@ -32,195 +19,229 @@ import { getToken } from '../token.mjs';
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const neuesBuch: Omit<BuchDTO, 'preis' | 'rabatt'> & {
-    preis: number;
-    rabatt: number;
-} = {
-    isbn: '978-0-007-00644-1',
-    rating: 1,
-    art: 'HARDCOVER',
-    preis: 99.99,
-    rabatt: 0.0123,
-    lieferbar: true,
-    datum: '2025-02-28T00:00:00Z',
-    homepage: 'https://post.rest',
-    schlagwoerter: ['JAVASCRIPT', 'TYPESCRIPT'],
-    titel: {
-        titel: 'Titelpost',
-        untertitel: 'untertitelpos',
+
+// Daten fuer einen neuen, vollstaendigen Verein (inkl. Stadion und Spieler)
+const neuerVerein: FussballvereinDto = {
+    name: `Testverein ${Date.now()}`, // Eindeutigen Namen generieren
+    mitgliederanzahl: 50000,
+    website: 'https://testverein-neu.com',
+    email: 'kontakt@testverein-neu.com',
+    telefonnummer: '+49-30-123456',
+    // KORREKTUR: Vollstaendiges ISO-8601 Format fuer Prisma
+    gruendungsdatum: '2020-07-20T00:00:00Z',
+    stadion: {
+        stadt: 'Berlin',
+        kapazitaet: 60000,
+        strasse: 'Testallee',
+        hausnummer: '10',
     },
-    abbildungen: [
+    spieler: [
         {
-            beschriftung: 'Abb. 1',
-            contentType: 'img/png',
+            vorname: 'Max',
+            nachname: 'Mustermann',
+            alter: 25,
+            starkerFuss: 'Rechts',
+        },
+        {
+            vorname: 'Lisa',
+            nachname: 'Musterfrau',
+            alter: 22,
+            starkerFuss: 'Links',
         },
     ],
 };
-const neuesBuchInvalid: Record<string, unknown> = {
-    isbn: 'falsche-ISBN',
-    rating: -1,
-    art: 'UNSICHTBAR',
-    preis: -1,
-    rabatt: 2,
-    lieferbar: true,
-    datum: '12345-123-123',
-    homepage: 'anyHomepage',
-    titel: {
-        titel: '?!',
-        untertitel: 'Untertitelinvalid',
+
+// Daten mit absichtlich ungueltigen Werten zur Validierung
+const neuerVereinInvalid: Record<string, unknown> = {
+    // name: 'a', <--- ENTFERNT, da dies g&uuml;ltig ist (keine MinLength)
+    mitgliederanzahl: -1, // Muss >= 0 sein
+    website: 'keine-url', // Falsche URL
+    email: 'keine-email', // Falsches Format
+    stadion: {
+        stadt: '', // Darf nicht leer sein
+        kapazitaet: 500000, // Zu hoch (Max 200000)
     },
-};
-const neuesBuchIsbnExistiert: BuchDTO = {
-    isbn: '978-3-897-22583-1',
-    rating: 1,
-    art: 'EPUB',
-    preis: new BigNumber(99.99),
-    rabatt: new BigNumber(0.09),
-    lieferbar: true,
-    datum: '2025-02-28T00:00:00Z',
-    homepage: 'https://post.isbn/',
-    schlagwoerter: ['JAVASCRIPT', 'TYPESCRIPT'],
-    titel: {
-        titel: 'Titelpostisbn',
-        untertitel: 'Untertitelpostisbn',
-    },
-    abbildungen: [],
+    spieler: [
+        {
+            vorname: 'a',
+            nachname: 'b',
+            alter: 10, // Zu jung (Min 16)
+            starkerFuss: 'Unbekannt', // Ungültiges Enum-Muster
+        },
+    ],
 };
 
-type MessageType = { message: string };
+// Daten fuer den Konflikt-Test (Name Existiert bereits)
+const nameExistiert = 'FC Bayern München'; // Angenommen, dieser existiert
+const neuerVereinNameExistiert: FussballvereinDto = {
+    name: nameExistiert,
+    mitgliederanzahl: 100,
+    // KORREKTUR: Gültiges Datum einf&uuml;gen, um den 422 Test nicht wegen eines 500er Fehlers zum Scheitern zu bringen
+    gruendungsdatum: '2020-07-20T00:00:00Z',
+    stadion: { stadt: 'Dummy', kapazitaet: 100 },
+};
+
+type MessageType = { message: string | string[] };
 
 // -----------------------------------------------------------------------------
 // T e s t s
 // -----------------------------------------------------------------------------
-// Test-Suite
-describe('POST /rest', () => {
-    let token: string;
+describe('POST /rest/fussballvereine', () => {
+    let tokenAdmin: string;
+    let tokenUser: string;
 
     beforeAll(async () => {
-        token = await getToken('admin', 'p');
+        // Token fuer Erstellung notwendig (Roles('admin', 'user'))
+        tokenAdmin = await getToken('admin', 'p');
+        tokenUser = await getToken('user', 'p');
     });
 
-    test('Neues Buch', async () => {
+    test('Neuen Fussballverein erstellen (201 Created)', async () => {
         // given
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`); // Admin-Token
 
         // when
         const response = await fetch(restURL, {
             method: POST,
-            body: JSON.stringify(neuesBuch),
+            body: JSON.stringify(neuerVerein),
             headers,
         });
 
         // then
         const { status } = response;
-
         expect(status).toBe(HttpStatus.CREATED);
 
         const responseHeaders = response.headers;
         const location = responseHeaders.get(LOCATION);
 
+        // Pruefe Location-Header
         expect(location).toBeDefined();
 
-        // ID nach dem letzten "/"
+        // Extrahiere die ID aus dem Location-Header
         const indexLastSlash = location?.lastIndexOf('/') ?? -1;
-
         expect(indexLastSlash).not.toBe(-1);
 
         const idStr = location?.slice(indexLastSlash + 1);
 
         expect(idStr).toBeDefined();
-        expect(BuchService.ID_PATTERN.test(idStr ?? '')).toBe(true);
+        // Pruefe, ob die ID das korrekte Muster hat
+        expect(FussballvereinService.ID_PATTERN.test(idStr ?? '')).toBe(true);
     });
 
-    test.concurrent('Neues Buch mit ungueltigen Daten', async () => {
-        // given
-        const headers = new Headers();
-        headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+    test.concurrent(
+        'Neuen Verein mit ungueltigen Daten (400 Bad Request)',
+        async () => {
+            // given
+            const headers = new Headers();
+            headers.append(CONTENT_TYPE, APPLICATION_JSON);
+            headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
 
-        const expectedMsg = [
-            expect.stringMatching(/^isbn /u),
-            expect.stringMatching(/^rating /u),
-            expect.stringMatching(/^art /u),
-            expect.stringMatching(/^preis /u),
-            expect.stringMatching(/^rabatt /u),
-            expect.stringMatching(/^datum /u),
-            expect.stringMatching(/^homepage /u),
-            expect.stringMatching(/^titel.titel /u),
-        ];
+            // Erwartete Fehlermeldungen: name wurde entfernt, da es g&uuml;ltig war
+            const expectedMsgContains = [
+                'mitgliederanzahl',
+                'website',
+                'email',
+                'stadion.stadt',
+                'stadion.kapazitaet',
+                'spieler.0.alter',
+                'spieler.0.starkerFuss',
+            ];
 
-        // when
-        const response = await fetch(restURL, {
-            method: POST,
-            body: JSON.stringify(neuesBuchInvalid),
-            headers,
-        });
+            // when
+            const response = await fetch(restURL, {
+                method: POST,
+                body: JSON.stringify(neuerVereinInvalid),
+                headers,
+            });
 
-        // then
-        const { status } = response;
+            // then
+            const { status } = response;
+            expect(status).toBe(HttpStatus.BAD_REQUEST);
 
-        expect(status).toBe(HttpStatus.BAD_REQUEST);
+            const body = (await response.json()) as MessageType;
+            const messages = body.message as string[];
 
-        const body = (await response.json()) as MessageType;
-        const messages = body.message;
+            expect(messages).toBeDefined();
+            // Prueft, ob die Meldungen alle erwarteten ungueltigen Felder referenzieren
+            expectedMsgContains.forEach((expectedPart) => {
+                const found = messages.some((msg) =>
+                    msg.includes(expectedPart),
+                );
+                expect(found).toBe(true);
+            });
+        },
+    );
 
-        expect(messages).toBeDefined();
-        expect(messages).toHaveLength(expectedMsg.length);
-        expect(messages).toStrictEqual(expect.arrayContaining(expectedMsg));
-    });
+    test.concurrent(
+        'Neuen Verein, aber der Name existiert bereits (422 Unprocessable Entity)',
+        async () => {
+            // given
+            const headers = new Headers();
+            headers.append(CONTENT_TYPE, APPLICATION_JSON);
+            headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
-    test.concurrent('Neues Buch, aber die ISBN existiert bereits', async () => {
-        // given
-        const headers = new Headers();
-        headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+            // when
+            const response = await fetch(restURL, {
+                method: POST,
+                body: JSON.stringify(neuerVereinNameExistiert),
+                headers,
+            });
 
-        // when
-        const response = await fetch(restURL, {
-            method: POST,
-            body: JSON.stringify(neuesBuchIsbnExistiert),
-            headers,
-        });
+            // then
+            const { status } = response;
 
-        // then
-        const { status } = response;
+            // Erwartet HttpStatus.UNPROCESSABLE_ENTITY (422) von NameExistsException
+            expect(status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
 
-        expect(status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
+            const body = (await response.json()) as MessageType;
+            // Prueft auf die korrekte Fehlermeldung
+            expect(body.message).toStrictEqual(
+                expect.stringContaining(nameExistiert),
+            );
+        },
+    );
 
-        const body = (await response.json()) as MessageType;
+    test.concurrent(
+        'Neuen Verein, aber ohne Token (401 Unauthorized)',
+        async () => {
+            // given
+            const headers = new Headers();
+            headers.append(CONTENT_TYPE, APPLICATION_JSON);
 
-        expect(body.message).toStrictEqual(expect.stringContaining('ISBN'));
-    });
+            // when
+            const { status } = await fetch(restURL, {
+                method: POST,
+                body: JSON.stringify(neuerVerein),
+                headers,
+            });
 
-    test.concurrent('Neues Buch, aber ohne Token', async () => {
-        // when
-        const { status } = await fetch(restURL, {
-            method: POST,
-            body: JSON.stringify(neuesBuch),
-        });
+            // then
+            // Erwartet 401 Unauthorized, da AuthGuard aktiv ist
+            expect(status).toBe(HttpStatus.UNAUTHORIZED);
+        },
+    );
 
-        // then
-        expect(status).toBe(HttpStatus.UNAUTHORIZED);
-    });
+    test.concurrent(
+        'Neuen Verein, aber mit falschem Token (401 Unauthorized)',
+        async () => {
+            // given
+            const headers = new Headers();
+            headers.append(CONTENT_TYPE, APPLICATION_JSON);
+            headers.append(AUTHORIZATION, `${BEARER} FALSCHER_TOKEN`);
 
-    test.concurrent('Neues Buch, aber mit falschem Token', async () => {
-        // given
-        const headers = new Headers();
-        headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} FALSCHER_TOKEN`);
+            // when
+            const { status } = await fetch(restURL, {
+                method: POST,
+                body: JSON.stringify(neuerVerein),
+                headers,
+            });
 
-        // when
-        const { status } = await fetch(restURL, {
-            method: POST,
-            body: JSON.stringify(neuesBuch),
-            headers,
-        });
-
-        // then
-        expect(status).toBe(HttpStatus.UNAUTHORIZED);
-    });
+            // then
+            expect(status).toBe(HttpStatus.UNAUTHORIZED);
+        },
+    );
 
     test.concurrent.todo('Abgelaufener Token');
 });
