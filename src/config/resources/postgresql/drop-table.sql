@@ -23,4 +23,5 @@ SET search_path TO 'fussballverein';
 
 DROP TABLE IF EXISTS spieler CASCADE;
 DROP TABLE IF EXISTS stadion CASCADE;
+DROP TABLE IF EXISTS logo_file CASCADE;
 DROP TABLE IF EXISTS fussballverein CASCADE;

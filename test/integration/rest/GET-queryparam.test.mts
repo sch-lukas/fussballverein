@@ -1,67 +1,103 @@
-// Copyright (C) 2025 - present Juergen Zimmermann, Hochschule Karlsruhe
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// src/fussballverein/rest/fussballverein-get-search.test.ts
 
 import { HttpStatus } from '@nestjs/common';
-import BigNumber from 'bignumber.js';
 import { describe, expect, test } from 'vitest';
-import { type Page } from '../../../src/buch/controller/page.js';
+import { type Page } from '../../../src/fussballverein/controller/page.js';
+import { type FussballvereinMitBasis } from '../../../src/fussballverein/service/fussballverein-service.js';
 import { CONTENT_TYPE, restURL } from '../constants.mjs';
-import { Buch } from '../../../src/generated/prisma/client.js';
-import { BuchMitTitel } from '../../../src/buch/service/buch-service.js';
 
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const titelArray = ['a', 'l', 't'];
-const titelNichtVorhanden = ['xxx', 'yyy', 'zzz'];
-const isbns = ['978-3-897-22583-1', '978-3-827-31552-6', '978-0-201-63361-0'];
-const ratingMin = [3, 4];
-const preisMax = [33.5, 66.6];
-const schlagwoerter = ['javascript', 'typescript'];
-const schlagwoerterNichtVorhanden = ['csharp', 'cobol'];
+const nameArray = ['bayern', 'tsg'];
+const nameNichtVorhanden = ['bundesliga', 'regionalliga'];
+const mitgliederMin = [10000, 100000];
+const stadtArray = ['münchen', 'sinsheim'];
 
 // -----------------------------------------------------------------------------
 // T e s t s
 // -----------------------------------------------------------------------------
 // Test-Suite
-describe('GET /rest', () => {
-    test.concurrent('Alle Buecher', async () => {
-        // given
+describe('GET /rest/fussballvereine (Suchen)', () => {
+    test.concurrent(
+        'Alle Vereine mit Paginierung (keine Query-Parameter)',
+        async () => {
+            // given
+            const expectedMinCount = 4;
 
-        // when
-        const response = await fetch(restURL);
-        const { status, headers } = response;
+            // when
+            const response = await fetch(restURL);
+            const { status, headers } = response;
 
-        // then
-        expect(status).toBe(HttpStatus.OK);
-        expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
+            // then
+            expect(status).toBe(HttpStatus.OK);
+            expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
 
-        const body = (await response.json()) as Page<Buch>;
+            const body =
+                (await response.json()) as Page<FussballvereinMitBasis>;
 
-        body.content
-            .map((buch) => buch.id)
-            .forEach((id) => {
-                expect(id).toBeDefined();
+            expect(body.content.length).toBeGreaterThanOrEqual(1);
+            expect(body.page.totalElements).toBeGreaterThanOrEqual(
+                expectedMinCount,
+            );
+        },
+    );
+
+    test.concurrent.each(nameArray)(
+        'Vereine mit Teil-Namen %s suchen (200 OK)',
+        async (name) => {
+            // given
+            const params = new URLSearchParams({ name });
+            const url = `${restURL}?${params}`;
+
+            // when
+            const response = await fetch(url);
+            const { status, headers } = response;
+
+            // then
+            expect(status).toBe(HttpStatus.OK);
+            expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
+
+            const body =
+                (await response.json()) as Page<FussballvereinMitBasis>;
+
+            expect(body).toBeDefined();
+            expect(body.content.length).toBeGreaterThanOrEqual(1);
+
+            // Prüft, ob jeder Name den Teilstring enthält (case-insensitive)
+            body.content
+                .map((verein) => verein.name)
+                .forEach((n) => {
+                    expect(n?.toLowerCase()).toStrictEqual(
+                        expect.stringContaining(name),
+                    );
+                });
+        },
+    );
+
+    test.concurrent.each(nameNichtVorhanden)(
+        'Vereine zu nicht vorhandenem Teil-Namen %s suchen (404 Not Found)',
+        async (name) => {
+            // given
+            const params = new URLSearchParams({ name });
+            const url = `${restURL}?${params}`;
+
+            // when
+            const { status } = await fetch(url);
+
+            // then
+
+            expect(status).toBe(HttpStatus.NOT_FOUND);
+        },
+    );
+
+    test.concurrent.each(mitgliederMin)(
+        'Vereine mit Mindest-Mitgliederanzahl %i suchen (200 OK)',
+        async (mitgliederanzahl) => {
+            // given
+            const params = new URLSearchParams({
+                mitgliederanzahl: mitgliederanzahl.toString(),
             });
-    });
-
-    test.concurrent.each(titelArray)(
-        'Buecher mit Teil-Titel %s suchen',
-        async (titel) => {
-            // given
-            const params = new URLSearchParams({ titel });
             const url = `${restURL}?${params}`;
 
             // when
@@ -72,69 +108,23 @@ describe('GET /rest', () => {
             expect(status).toBe(HttpStatus.OK);
             expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
 
-            const body = (await response.json()) as Page<BuchMitTitel>;
+            const body =
+                (await response.json()) as Page<FussballvereinMitBasis>;
 
-            expect(body).toBeDefined();
-
-            // Jedes Buch hat einen Titel mit dem Teilstring
+            // Jedes Ergebnis muss die Mindest-Mitgliederanzahl erfüllen
             body.content
-                .map((buch) => buch.titel)
-                .forEach((t) =>
-                    expect(t?.titel?.toLowerCase()).toStrictEqual(
-                        expect.stringContaining(titel),
-                    ),
-                );
+                .map((verein) => verein.mitgliederanzahl)
+                .forEach((anzahl) => {
+                    expect(anzahl).toBeGreaterThanOrEqual(mitgliederanzahl);
+                });
         },
     );
 
-    test.concurrent.each(titelNichtVorhanden)(
-        'Buecher zu nicht vorhandenem Teil-Titel %s suchen',
-        async (titel) => {
+    test.concurrent.each(stadtArray)(
+        'Vereine mit Stadion in Stadt %s suchen (200 OK)',
+        async (stadt) => {
             // given
-            const params = new URLSearchParams({ titel });
-            const url = `${restURL}?${params}`;
-
-            // when
-            const { status } = await fetch(url);
-
-            // then
-            expect(status).toBe(HttpStatus.NOT_FOUND);
-        },
-    );
-
-    test.concurrent.each(isbns)('Buch mit ISBN %s suchen', async (isbn) => {
-        // given
-        const params = new URLSearchParams({ isbn });
-        const url = `${restURL}?${params}`;
-
-        // when
-        const response = await fetch(url);
-        const { status, headers } = response;
-
-        // then
-        expect(status).toBe(HttpStatus.OK);
-        expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
-
-        const body = (await response.json()) as Page<Buch>;
-
-        expect(body).toBeDefined();
-
-        // 1 Buch mit der ISBN
-        const buecher = body.content;
-
-        expect(buecher).toHaveLength(1);
-
-        const [buch] = buecher;
-        const isbnFound = buch?.isbn;
-
-        expect(isbnFound).toBe(isbn);
-    });
-
-    test.concurrent.each(ratingMin)(
-        'Buecher mit Mindest-"rating" %i suchen',
-        async (rating) => {
-            // given
-            const params = new URLSearchParams({ rating: rating.toString() });
+            const params = new URLSearchParams({ stadt });
             const url = `${restURL}?${params}`;
 
             // when
@@ -145,88 +135,15 @@ describe('GET /rest', () => {
             expect(status).toBe(HttpStatus.OK);
             expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
 
-            const body = (await response.json()) as Page<Buch>;
+            const body =
+                (await response.json()) as Page<FussballvereinMitBasis>;
 
-            // Jedes Buch hat eine Bewertung >= rating
-            body.content
-                .map((buch) => buch.rating)
-                .forEach((r) => expect(r).toBeGreaterThanOrEqual(rating));
-        },
-    );
-
-    test.concurrent.each(preisMax)(
-        'Buecher mit max. Preis %d suchen',
-        async (preis) => {
-            // given
-            const params = new URLSearchParams({ preis: preis.toString() });
-            const url = `${restURL}?${params}`;
-
-            // when
-            const response = await fetch(url);
-            const { status, headers } = response;
-
-            // then
-            expect(status).toBe(HttpStatus.OK);
-            expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
-
-            const body = (await response.json()) as Page<Buch>;
-
-            // Jedes Buch hat einen Preis <= preis
-            body.content
-                .map((buch) => BigNumber(buch?.preis?.toString() ?? 0))
-                .forEach((p) =>
-                    expect(p.isLessThanOrEqualTo(BigNumber(preis))).toBe(true),
-                );
-        },
-    );
-
-    test.concurrent.each(schlagwoerter)(
-        'Mind. 1 Buch mit Schlagwort %s',
-        async (schlagwort) => {
-            // given
-            const params = new URLSearchParams({ [schlagwort]: 'true' });
-            const url = `${restURL}?${params}`;
-
-            // when
-            const response = await fetch(url);
-            const { status, headers } = response;
-
-            // then
-            expect(status).toBe(HttpStatus.OK);
-            expect(headers.get(CONTENT_TYPE)).toMatch(/json/iu);
-
-            const body = (await response.json()) as Page<Buch>;
-
-            // JSON-Array mit mind. 1 JSON-Objekt
-            expect(body).toBeDefined();
-
-            // Jedes Buch hat im Array der Schlagwoerter z.B. "javascript"
-            body.content
-                .map((buch) => buch.schlagwoerter)
-                .forEach((schlagwoerter) =>
-                    expect(schlagwoerter).toStrictEqual(
-                        expect.arrayContaining([schlagwort.toUpperCase()]),
-                    ),
-                );
-        },
-    );
-
-    test.concurrent.each(schlagwoerterNichtVorhanden)(
-        'Keine Buecher zu einem nicht vorhandenen Schlagwort',
-        async (schlagwort) => {
-            const params = new URLSearchParams({ [schlagwort]: 'true' });
-            const url = `${restURL}?${params}`;
-
-            // when
-            const { status } = await fetch(url);
-
-            // then
-            expect(status).toBe(HttpStatus.NOT_FOUND);
+            expect(body.content.length).toBeGreaterThanOrEqual(1);
         },
     );
 
     test.concurrent(
-        'Keine Buecher zu einer nicht-vorhandenen Property',
+        'Keine Vereine zu einer nicht-vorhandenen Property (404 Not Found)',
         async () => {
             // given
             const params = new URLSearchParams({ foo: 'bar' });
@@ -236,6 +153,7 @@ describe('GET /rest', () => {
             const { status } = await fetch(url);
 
             // then
+
             expect(status).toBe(HttpStatus.NOT_FOUND);
         },
     );
