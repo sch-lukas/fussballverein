@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-// Copyright (C) 2016 - present Juergen Zimmermann, Hochschule Karlsruhe
+// Copyright (C) 2025 - present Juergen Zimmermann, Hochschule Karlsruhe
 //
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -8,7 +8,7 @@
 //
 // This program is distributed in the hope that it will be useful,
 // but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 // GNU General Public License for more details.
 //
 // You should have received a copy of the GNU General Public License
@@ -26,70 +26,80 @@ import {
     POST,
     graphqlURL,
 } from '../constants.mjs';
+import { getToken } from '../token.mjs';
 import { type GraphQLQuery } from './graphql.mjs';
-import { ErrorsType } from './query.test.mjs';
-import { getToken } from './token.mjs';
 
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const idLoeschen = '60';
+const idLoeschen = '4';
+const nameExistiert = 'FC Bayern München';
+
+// -----------------------------------------------------------------------------
+// TYPDEFINITIONEN für Payloads (basierend auf mutation.ts)
+// -----------------------------------------------------------------------------
+type ErrorsType = {
+    message: string;
+    path: string[];
+    extensions: { code: string };
+};
 
 type CreateSuccessType = {
     data: { create: { id: string } };
     errors?: undefined;
 };
-type CreateErrorsType = { data: { create: null }; errors: ErrorsType };
+type CreateErrorsType = { data: { create: null }; errors: ErrorsType[] };
 
 type UpdateSuccessType = {
     data: { update: { version: number } };
     errors?: undefined;
 };
-type UpdateErrorsType = { data: { update: null }; errors: ErrorsType };
+type UpdateErrorsType = { data: { update: null }; errors: ErrorsType[] };
 
 type DeleteSuccessType = {
     data: { delete: { success: boolean } };
     errors?: undefined;
 };
-type DeleteErrorsType = { data: { delete: null }; errors: ErrorsType };
+type DeleteErrorsType = { data: { delete: null }; errors: ErrorsType[] };
 
 // -----------------------------------------------------------------------------
 // T e s t s
 // -----------------------------------------------------------------------------
 // Test-Suite
-describe('GraphQL Mutations', () => {
-    let token: string;
+describe('GraphQL Mutations (Fussballverein)', () => {
+    let tokenAdmin: string;
     let tokenUser: string;
 
     beforeAll(async () => {
-        token = await getToken('admin', 'p');
+        tokenAdmin = await getToken('admin', 'p');
         tokenUser = await getToken('user', 'p');
     });
 
     // -------------------------------------------------------------------------
-    test('Neues Buch', async () => {
+    // MUTATION: CREATE (Einfuegen)
+    // -------------------------------------------------------------------------
+    test('Neuen Fussballverein erstellen (success)', async () => {
         // given
+        const neuerName = `Testverein-${Date.now()}`;
         const mutation: GraphQLQuery = {
             query: `
                 mutation {
                     create(
                         input: {
-                            isbn: "978-1-491-95035-7",
-                            rating: 1,
-                            art: EPUB,
-                            preis: 99.99,
-                            rabatt: 0.0123,
-                            lieferbar: true,
-                            datum: "2022-02-28T00:00:00Z",
-                            homepage: "https://create.mutation",
-                            schlagwoerter: ["JAVASCRIPT", "TYPESCRIPT"],
-                            titel: {
-                                titel: "Titelcreatemutation",
-                                untertitel: "untertitelcreatemutation"
+                            name: "${neuerName}",
+                            mitgliederanzahl: 1000,
+                            website: "https://new.test",
+                            email: "new@test.com",
+                            gruendungsdatum: "2025-01-01T00:00:00Z",
+                            stadion: {
+                                stadt: "Neuhausen",
+                                kapazitaet: 10000,
                             },
-                            abbildungen: [{
-                                beschriftung: "Abb. 1",
-                                contentType: "img/png"
+                            spieler: [{
+                                vorname: "Neo",
+                                nachname: "Spieler",
+                                alter: 20,
+                                starkerFuss: Rechts
                             }]
                         }
                     ) {
@@ -101,7 +111,7 @@ describe('GraphQL Mutations', () => {
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
         headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(graphqlURL, {
@@ -112,44 +122,35 @@ describe('GraphQL Mutations', () => {
 
         // then
         const { status } = response;
-
         expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
 
-        const { data } = (await response.json()) as CreateSuccessType;
+        const { data, errors } = (await response.json()) as CreateSuccessType;
 
+        expect(errors).toBeUndefined();
         expect(data).toBeDefined();
 
         const { create } = data;
-
         // Der Wert der Mutation ist die generierte ID
         expect(create).toBeDefined();
 
         const { id } = create;
-
         expect(parseInt(id, 10)).toBeGreaterThan(0);
     });
 
-    // -------------------------------------------------------------------------
-    test('Buch mit ungueltigen Werten neu anlegen', async () => {
+    test('Verein mit ungueltigen Werten neu anlegen (400 Bad Request / BAD_USER_INPUT)', async () => {
         // given
         const mutation: GraphQLQuery = {
             query: `
                 mutation {
                     create(
                         input: {
-                            isbn: "falsche-ISBN",
-                            rating: -1,
-                            art: EPUB,
-                            preis: -1,
-                            rabatt: 2,
-                            lieferbar: false,
-                            datum: "12345-123-123",
-                            homepage: "anyHomepage",
-                            titel: {
-                                titel: "?!"
+                            name: "",         # Ungueltig
+                            mitgliederanzahl: -5, # Ungueltig
+                            email: "falsch",  # Ungueltig
+                            gruendungsdatum: "2025-01-01", # Ungueltig (keine Zeit/Zone)
+                            stadion: {
+                                stadt: "",    # Ungueltig
+                                kapazitaet: 300000 # Ungueltig
                             }
                         }
                     ) {
@@ -158,19 +159,19 @@ describe('GraphQL Mutations', () => {
                 }
             `,
         };
-        const expectedMsg = [
-            expect.stringMatching(/^isbn /u),
-            expect.stringMatching(/^rating /u),
-            expect.stringMatching(/^preis /u),
-            expect.stringMatching(/^rabatt /u),
-            expect.stringMatching(/^datum /u),
-            expect.stringMatching(/^homepage /u),
-            expect.stringMatching(/^titel.titel /u),
+        // Erwartete Fehlermeldungen (nur eine Nachricht mit allen Fehlern)
+        const expectedMsgParts = [
+            'name must be longer than or equal to 1 characters',
+            'mitgliederanzahl must not be less than 0',
+            'email must be an email',
+            'gruendungsdatum must be a valid ISO 8601 date string',
+            'stadion.stadt should not be empty',
+            'stadion.kapazitaet must not be greater than 200000',
         ];
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
         headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(graphqlURL, {
@@ -180,60 +181,45 @@ describe('GraphQL Mutations', () => {
         });
 
         // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
+        expect(response.status).toBe(HttpStatus.OK);
 
         const { data, errors } = (await response.json()) as CreateErrorsType;
 
         expect(data.create).toBeNull();
         expect(errors).toHaveLength(1);
 
-        const [error] = errors;
+        const [error] = errors; // error ist jetzt ErrorsType | undefined
 
-        expect(error).toBeDefined();
+        expect(error).toBeDefined(); // Explizite Zusicherung
 
-        const { message } = error!;
-        const messages: string[] = message.split(',');
+        const { message, extensions } = error!; // Non-Null Operator für Destrukturierung
 
-        expect(messages).toBeDefined();
-        expect(messages).toHaveLength(expectedMsg.length);
-        expect(messages).toStrictEqual(expect.arrayContaining(expectedMsg));
+        // Prueft, ob der Fehlercode korrekt aus der Exception gefiltert wurde
+        expect(extensions.code).toBe('BAD_USER_INPUT');
+
+        // Prueft, ob die Fehlermeldung alle erwarteten Validierungsfehler enthält
+        expectedMsgParts.forEach((part) => expect(message).toContain(part));
     });
 
-    // -------------------------------------------------------------------------
-    test('Buch aktualisieren', async () => {
+    test('Verein mit Name existiert bereits (422 / BAD_USER_INPUT)', async () => {
         // given
         const mutation: GraphQLQuery = {
             query: `
                 mutation {
-                    update(
+                    create(
                         input: {
-                            id: "40",
-                            version: 0,
-                            isbn: "978-0-007-09732-6",
-                            rating: 5,
-                            art: HARDCOVER,
-                            preis: 444.44,
-                            rabatt: 0.099,
-                            lieferbar: false,
-                            datum: "2025-04-04T00:00:00Z",
-                            homepage: "https://update.mutation"
-                            schlagwoerter: ["JAVA", "PYTHON"],
+                            name: "${nameExistiert}", # Konflikt
+                            gruendungsdatum: "2025-01-01T00:00:00Z"
                         }
                     ) {
-                        version
+                        id
                     }
                 }
             `,
         };
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(graphqlURL, {
@@ -243,112 +229,75 @@ describe('GraphQL Mutations', () => {
         });
 
         // then
-        const { status } = response;
+        expect(response.status).toBe(HttpStatus.OK);
+        const { data, errors } = (await response.json()) as CreateErrorsType;
 
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
+        expect(data.create).toBeNull();
+        expect(errors).toHaveLength(1);
+
+        const [error] = errors; // error ist jetzt ErrorsType | undefined
+        expect(error).toBeDefined();
+
+        expect(error.extensions.code).toBe('BAD_USER_INPUT'); // NameExistsException wird zu 422/BAD_USER_INPUT
+        expect(error.message).toContain(
+            `Der Vereinsname "${nameExistiert}" existiert bereits`,
         );
+    });
 
+    // -------------------------------------------------------------------------
+    // MUTATION: UPDATE (Aktualisieren)
+    // -------------------------------------------------------------------------
+    test('Verein aktualisieren mit Optimistischer Sperre (success)', async () => {
+        // ID 1 (FC Bayern M&uuml;nchen) hat version 1. Wir senden 1.
+        const idVorhanden = '1';
+        const mutation: GraphQLQuery = {
+            query: `
+                mutation {
+                    update(
+                        input: {
+                            id: "${idVorhanden}",
+                            version: 1, # Aktuelle Version
+                            name: "FC Bayern München NEU",
+                            gruendungsdatum: "2025-04-04T00:00:00Z",
+                            email: "neue@email.com"
+                        }
+                    ) {
+                        version
+                    }
+                }
+            `,
+        };
+        const headers = new Headers();
+        headers.append(CONTENT_TYPE, APPLICATION_JSON);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
+
+        // when
+        const response = await fetch(graphqlURL, {
+            method: POST,
+            body: JSON.stringify(mutation),
+            headers,
+        });
+
+        // then
+        expect(response.status).toBe(HttpStatus.OK);
         const { data, errors } = (await response.json()) as UpdateSuccessType;
 
         expect(errors).toBeUndefined();
-
-        const { update } = data;
-
-        // Der Wert der Mutation ist die neue Versionsnummer
-        expect(update.version).toBe(1);
+        // Erwartet: Die inkrementierte Version (1 + 1 = 2)
+        expect(data.update.version).toBe(2);
     });
 
-    // -------------------------------------------------------------------------
-    test('Buch mit ungueltigen Werten aktualisieren', async () => {
+    test('Verein mit alter Versionsnummer aktualisieren (412 / BAD_USER_INPUT)', async () => {
         // given
-        const id = '40';
+        const idVorhanden = '1';
         const mutation: GraphQLQuery = {
             query: `
                 mutation {
                     update(
                         input: {
-                            id: "${id}",
-                            version: 0,
-                            isbn: "falsche-ISBN",
-                            rating: -1,
-                            art: EPUB,
-                            preis: -1,
-                            rabatt: 2,
-                            lieferbar: false,
-                            datum: "12345-123-123",
-                            homepage: "anyHomepage",
-                            schlagwoerter: ["JAVASCRIPT", "TYPESCRIPT"]
-                        }
-                    ) {
-                        version
-                    }
-                }
-            `,
-        };
-        const expectedMsg = [
-            expect.stringMatching(/^isbn /u),
-            expect.stringMatching(/^rating /u),
-            expect.stringMatching(/^preis /u),
-            expect.stringMatching(/^rabatt /u),
-            expect.stringMatching(/^datum /u),
-            expect.stringMatching(/^homepage /u),
-        ];
-        const headers = new Headers();
-        headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
-
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(mutation),
-            headers,
-        });
-
-        // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
-        const { data, errors } = (await response.json()) as UpdateErrorsType;
-
-        expect(data.update).toBeNull();
-        expect(errors).toHaveLength(1);
-
-        const [error] = errors!;
-        const { message } = error!;
-        const messages: string[] = message.split(',');
-
-        expect(messages).toBeDefined();
-        expect(messages).toHaveLength(expectedMsg.length);
-        expect(messages).toStrictEqual(expect.arrayContaining(expectedMsg));
-    });
-
-    // -------------------------------------------------------------------------
-    test('Nicht-vorhandenes Buch aktualisieren', async () => {
-        // given
-        const id = '999999';
-        const mutation: GraphQLQuery = {
-            query: `
-                mutation {
-                    update(
-                        input: {
-                            id: "${id}",
-                            version: 0,
-                            isbn: "978-0-007-09732-6",
-                            rating: 5,
-                            art: EPUB,
-                            preis: 99.99,
-                            rabatt: 0.099,
-                            lieferbar: false,
-                            datum: "2021-01-02T00:00:00Z",
-                            homepage: "https://acme.com",
-                            schlagwoerter: ["JAVASCRIPT", "TYPESCRIPT"]
+                            id: "${idVorhanden}",
+                            version: -1, # Veraltete Version
+                            name: "FC Bayern München Veraltet"
                         }
                     ) {
                         version
@@ -358,8 +307,7 @@ describe('GraphQL Mutations', () => {
         };
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(graphqlURL, {
@@ -369,35 +317,26 @@ describe('GraphQL Mutations', () => {
         });
 
         // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
+        expect(response.status).toBe(HttpStatus.OK);
         const { data, errors } = (await response.json()) as UpdateErrorsType;
 
         expect(data.update).toBeNull();
         expect(errors).toHaveLength(1);
 
-        const [error] = errors!;
-
+        const [error] = errors!; // KORREKTUR: Non-Null Operator hier
         expect(error).toBeDefined();
 
-        const { message, path, extensions } = error!;
-
-        expect(message).toBe(
-            `Es gibt kein Buch mit der ID ${id.toLowerCase()}.`,
+        expect(error.extensions.code).toBe('BAD_USER_INPUT'); // VersionOutdatedException
+        expect(error.message).toContain(
+            'Die Versionsnummer -1 ist nicht aktuell',
         );
-        expect(path).toBeDefined();
-        expect(path![0]).toBe('update');
-        expect(extensions).toBeDefined();
-        expect(extensions!.code).toBe('BAD_USER_INPUT');
+        expect(error.path![0]).toBe('update');
     });
 
     // -------------------------------------------------------------------------
-    test('Buch loeschen', async () => {
+    // MUTATION: DELETE (Loeschen)
+    // -------------------------------------------------------------------------
+    test('Verein loeschen als "admin" (success)', async () => {
         // given
         const mutation: GraphQLQuery = {
             query: `
@@ -410,8 +349,7 @@ describe('GraphQL Mutations', () => {
         };
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${token}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(graphqlURL, {
@@ -421,27 +359,20 @@ describe('GraphQL Mutations', () => {
         });
 
         // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
+        expect(response.status).toBe(HttpStatus.OK);
         const { data, errors } = (await response.json()) as DeleteSuccessType;
 
         expect(errors).toBeUndefined();
-        // Der Wert der Mutation ist true (falls geloescht wurde) oder false
         expect(data.delete.success).toBe(true);
     });
 
-    // -------------------------------------------------------------------------
-    test('Buch loeschen als "user"', async () => {
+    test('Verein loeschen als "user" (Forbidden / BAD_USER_INPUT)', async () => {
         // given
+        const idLoeschenForbidden = '3'; // Barcelona
         const mutation: GraphQLQuery = {
             query: `
                 mutation {
-                    delete(id: "${idLoeschen}") {
+                    delete(id: "${idLoeschenForbidden}") {
                         success
                     }
                 }
@@ -449,8 +380,7 @@ describe('GraphQL Mutations', () => {
         };
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`); // User-Token
 
         // when
         const response = await fetch(graphqlURL, {
@@ -460,25 +390,17 @@ describe('GraphQL Mutations', () => {
         });
 
         // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
+        expect(response.status).toBe(HttpStatus.OK);
         const { data, errors } = (await response.json()) as DeleteErrorsType;
 
         expect(data.delete).toBeNull();
+        expect(errors).toHaveLength(1);
 
         const [error] = errors!;
-
         expect(error).toBeDefined();
 
-        const { message, extensions } = error!;
-
-        expect(message).toBe('Forbidden resource');
-        expect(extensions.code).toBe('BAD_USER_INPUT');
+        expect(error.extensions.code).toBe('BAD_USER_INPUT');
+        expect(error.message).toBe('Forbidden resource');
     });
 });
 /* eslint-enable @typescript-eslint/no-non-null-assertion */

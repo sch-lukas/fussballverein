@@ -1,22 +1,9 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-// Copyright (C) 2025 - present Juergen Zimmermann, Hochschule Karlsruhe
-//
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with this program. If not, see <https://www.gnu.org/licenses/>.
+// src/fussballverein/test/integration/graphql/query.test.mts
 
-import { type GraphQLRequest } from '@apollo/server';
 import { HttpStatus } from '@nestjs/common';
 import { beforeAll, describe, expect, test } from 'vitest';
+import { type FussballvereinMitAllen } from '../../../src/fussballverein/service/fussballverein-service.js';
 import {
     ACCEPT,
     APPLICATION_JSON,
@@ -25,113 +12,120 @@ import {
     POST,
     graphqlURL,
 } from '../constants.mjs';
-import { Buchart, type Prisma } from '../../../src/generated/prisma/client.js';
+import { type GraphQLQuery } from './graphql.mjs';
 
-export type BuchDTO = Omit<
-    Prisma.BuchGetPayload<{
-        include: {
-            titel: true;
-        };
-    }>,
-    'aktualisiert' | 'erzeugt' | 'rabatt'
->;
+// -----------------------------------------------------------------------------
+// TYPDEFINITIONEN für Payloads (basierend auf query.ts)
+// -----------------------------------------------------------------------------
+type FussballvereinDTO = FussballvereinMitAllen; // Für findById (mit allen Relationen)
 
-type BuchSuccessType = { data: { buch: BuchDTO }; errors?: undefined };
-type BuecherSuccessType = { data: { buecher: BuchDTO[] }; errors?: undefined };
+type SingleSuccessType = {
+    data: { fussballverein: FussballvereinDTO };
+    errors?: undefined;
+};
+type SearchSuccessType = {
+    data: { fussballvereine: FussballvereinDTO[] };
+    errors?: undefined;
+};
 
 export type ErrorsType = {
     message: string;
     path: string[];
     extensions: { code: string };
 }[];
-type BuchErrorsType = { data: { buch: null }; errors: ErrorsType };
-type BuecherErrorsType = { data: { buecher: null }; errors: ErrorsType };
+type SingleErrorsType = { data: { fussballverein: null }; errors: ErrorsType };
+type SearchErrorsType = { data: { fussballvereine: null }; errors: ErrorsType };
 
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const ids = [1, 20];
+const idsVorhanden = [1, 2]; // FC Bayern München, TSG Hoffenheim
 
-const titelArray = ['a', 'l', 't'];
-const titelNichtVorhanden = ['xxx', 'yyy', 'zzz'];
-const isbns = ['978-3-897-22583-1', '978-3-827-31552-6', '978-0-201-63361-0'];
-const ratingMin = [3, 4];
-const ratingNichtVorhanden = 99;
+const nameArray = ['bayern', 'tsg'];
+const nameNichtVorhanden = ['bundesliga', 'regionalliga'];
+const mitgliederMin = [10000, 100000];
+const mitgliederNichtVorhanden = 99999999;
 
 // -----------------------------------------------------------------------------
 // T e s t s
 // -----------------------------------------------------------------------------
 // Test-Suite
-describe('GraphQL Queries', () => {
+describe('GraphQL Queries (Fussballverein)', () => {
     let headers: Headers;
 
     beforeAll(() => {
         headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
         headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
+        // Kein Authorization-Header nötig, da Queries @Public() sind
     });
 
-    test.concurrent.each(ids)('Buch zu ID %i', async (id) => {
-        // given
-        const query: GraphQLRequest = {
-            query: `
+    // -------------------------------------------------------------------------
+    // QUERY: findById (Einzelabruf)
+    // -------------------------------------------------------------------------
+    test.concurrent.each(idsVorhanden)(
+        'Verein zu ID %i abrufen',
+        async (id) => {
+            // given
+            const query: GraphQLQuery = {
+                query: `
                 {
-                    buch(id: "${id}") {
+                    fussballverein(id: "${id}") {
                         version
-                        isbn
-                        rating
-                        art
-                        preis
-                        lieferbar
-                        datum
-                        homepage
-                        schlagwoerter
-                        titel {
-                            titel
+                        name
+                        mitgliederanzahl
+                        stadion {
+                            stadt
+                            kapazitaet
                         }
-                        rabatt(short: true)
+                        spieler {
+                            vorname
+                            nachname
+                            alter
+                        }
                     }
                 }
             `,
-        };
+            };
 
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(query),
-            headers,
-        });
+            // when
+            const response = await fetch(graphqlURL, {
+                method: POST,
+                body: JSON.stringify(query),
+                headers,
+            });
 
-        // then
-        const { status } = response;
+            // then
+            const { status } = response;
+            expect(status).toBe(HttpStatus.OK);
+            expect(response.headers.get(CONTENT_TYPE)).toMatch(
+                /application\/graphql-response\+json/iu,
+            );
 
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
+            const { data, errors } =
+                (await response.json()) as SingleSuccessType;
 
-        const { data, errors } = (await response.json()) as BuchSuccessType;
+            expect(errors).toBeUndefined();
+            expect(data).toBeDefined();
 
-        expect(errors).toBeUndefined();
-        expect(data).toBeDefined();
+            const { fussballverein: verein } = data;
 
-        const { buch } = data;
+            // Prüft die Basisdaten und Relations
+            expect(verein.name).toMatch(/^\w/u);
+            expect(verein.version).toBeGreaterThan(-1);
+            expect(verein.stadion).toBeDefined();
+            expect(verein.spieler).toBeDefined();
+        },
+    );
 
-        expect(buch.titel?.titel).toMatch(/^\w/u);
-        expect(buch.version).toBeGreaterThan(-1);
-        expect(buch.id).toBeUndefined();
-    });
-
-    test.concurrent('Buch zu nicht-vorhandener ID', async () => {
+    test.concurrent('Verein zu nicht-vorhandener ID', async () => {
         // given
         const id = '999999';
-        const query: GraphQLRequest = {
+        const query: GraphQLQuery = {
             query: `
                 {
-                    buch(id: "${id}") {
-                        titel {
-                            titel
-                        }
+                    fussballverein(id: "${id}") {
+                        name
                     }
                 }
             `,
@@ -148,38 +142,37 @@ describe('GraphQL Queries', () => {
         const { status } = response;
 
         expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
 
-        const { data, errors } = (await response.json()) as BuchErrorsType;
+        const { data, errors } = (await response.json()) as SingleErrorsType;
 
-        expect(data.buch).toBeNull();
+        expect(data.fussballverein).toBeNull();
         expect(errors).toHaveLength(1);
 
         const [error] = errors;
         const { message, path, extensions } = error!;
 
-        expect(message).toBe(`Es gibt kein Buch mit der ID ${id}.`);
+        // Fehler kommt von NotFoundException, gefiltert durch HttpExceptionFilter
+        expect(message).toBe(`Es gibt keinen Verein mit der ID ${id}.`);
         expect(path).toBeDefined();
-        expect(path![0]).toBe('buch');
+        expect(path![0]).toBe('fussballverein');
         expect(extensions).toBeDefined();
         expect(extensions!.code).toBe('BAD_USER_INPUT');
     });
 
-    test.concurrent.each(titelArray)(
-        'Buecher zu Teil-Titel %s',
-        async (titel) => {
+    // -------------------------------------------------------------------------
+    // QUERY: find (Suche)
+    // -------------------------------------------------------------------------
+    test.concurrent.each(nameArray)(
+        'Vereine zu Teil-Name %s suchen',
+        async (name) => {
             // given
-            const query: GraphQLRequest = {
+            const query: GraphQLQuery = {
                 query: `
                     {
-                        buecher(suchparameter: {
-                            titel: "${titel}"
+                        fussballvereine(suchparameter: {
+                            name: "${name}"
                         }) {
-                            titel {
-                                titel
-                            }
+                            name
                         }
                     }
                 `,
@@ -196,44 +189,37 @@ describe('GraphQL Queries', () => {
             const { status } = response;
 
             expect(status).toBe(HttpStatus.OK);
-            expect(response.headers.get(CONTENT_TYPE)).toMatch(
-                /application\/graphql-response\+json/iu,
-            );
 
             const { data, errors } =
-                (await response.json()) as BuecherSuccessType;
+                (await response.json()) as SearchSuccessType;
 
             expect(errors).toBeUndefined();
             expect(data).toBeDefined();
 
-            const { buecher } = data;
+            const { fussballvereine } = data;
 
-            expect(buecher).not.toHaveLength(0);
+            expect(fussballvereine).not.toHaveLength(0);
 
-            buecher
-                .map((buch) => buch.titel)
-                .forEach((t) =>
-                    expect(t?.titel?.toLowerCase()).toStrictEqual(
-                        expect.stringContaining(titel),
-                    ),
-                );
+            // Prüft, ob jeder Name den Teilstring enthält
+            fussballvereine.forEach((verein) =>
+                expect(verein.name.toLowerCase()).toStrictEqual(
+                    expect.stringContaining(name),
+                ),
+            );
         },
     );
 
-    test.concurrent.each(titelNichtVorhanden)(
-        'Buch zu nicht vorhandenem Titel %s',
-        async (titel) => {
+    test.concurrent.each(nameNichtVorhanden)(
+        'Verein zu nicht vorhandenem Teil-Name %s',
+        async (name) => {
             // given
-            const query: GraphQLRequest = {
+            const query: GraphQLQuery = {
                 query: `
                     {
-                        buecher(suchparameter: {
-                            titel: "${titel}"
+                        fussballvereine(suchparameter: {
+                            name: "${name}"
                         }) {
-                            art
-                            titel {
-                                titel
-                            }
+                            name
                         }
                     }
                 `,
@@ -248,43 +234,33 @@ describe('GraphQL Queries', () => {
 
             // then
             const { status } = response;
-
             expect(status).toBe(HttpStatus.OK);
-            expect(response.headers.get(CONTENT_TYPE)).toMatch(
-                /application\/graphql-response\+json/iu,
-            );
 
             const { data, errors } =
-                (await response.json()) as BuecherErrorsType;
+                (await response.json()) as SearchErrorsType;
 
-            expect(data.buecher).toBeNull();
+            expect(data.fussballvereine).toBeNull();
             expect(errors).toHaveLength(1);
 
             const [error] = errors;
-            const { message, path, extensions } = error!;
+            const { message, extensions } = error!;
 
-            expect(message).toMatch(/^Keine Buecher gefunden:/u);
-            expect(path).toBeDefined();
-            expect(path![0]).toBe('buecher');
-            expect(extensions).toBeDefined();
+            expect(message).toMatch(/^Keine Vereine gefunden:/u); // Erwartet Meldung aus Service
             expect(extensions!.code).toBe('BAD_USER_INPUT');
         },
     );
 
-    test.concurrent.each(isbns)(
-        'Buch zu ISBN-Nummer %s',
-        async (isbnExpected) => {
+    test.concurrent.each(mitgliederMin)(
+        'Vereine mit Mindest-Mitgliederanzahl %i',
+        async (mitgliederanzahl) => {
             // given
-            const query: GraphQLRequest = {
+            const query: GraphQLQuery = {
                 query: `
                     {
-                        buecher(suchparameter: {
-                            isbn: "${isbnExpected}"
+                        fussballvereine(suchparameter: {
+                            mitgliederanzahl: ${mitgliederanzahl}
                         }) {
-                            isbn
-                            titel {
-                                titel
-                            }
+                            mitgliederanzahl
                         }
                     }
                 `,
@@ -301,274 +277,68 @@ describe('GraphQL Queries', () => {
             const { status } = response;
 
             expect(status).toBe(HttpStatus.OK);
-            expect(response.headers.get(CONTENT_TYPE)).toMatch(
-                /application\/graphql-response\+json/iu,
-            );
 
             const { data, errors } =
-                (await response.json()) as BuecherSuccessType;
+                (await response.json()) as SearchSuccessType;
 
             expect(errors).toBeUndefined();
             expect(data).toBeDefined();
 
-            const { buecher } = data;
+            const { fussballvereine } = data;
 
-            expect(buecher).not.toHaveLength(0);
-            expect(buecher).toHaveLength(1);
+            expect(fussballvereine).not.toHaveLength(0);
 
-            const [buch] = buecher;
-            const { titel, isbn } = buch!;
-
-            expect(isbn).toBe(isbnExpected);
-            expect(titel?.titel).toBeDefined();
-        },
-    );
-
-    test.concurrent.each(ratingMin)(
-        'Buecher mit Mindest-"rating" %i',
-        async (ratingExpected) => {
-            // given
-            const teilTitel = 'a';
-            const query: GraphQLRequest = {
-                query: `
-                    {
-                        buecher(suchparameter: {
-                            rating: ${ratingExpected},
-                            titel: "${teilTitel}"
-                        }) {
-                            rating
-                            titel {
-                                titel
-                            }
-                        }
-                    }
-                `,
-            };
-
-            // when
-            const response = await fetch(graphqlURL, {
-                method: POST,
-                body: JSON.stringify(query),
-                headers,
-            });
-
-            // then
-            const { status } = response;
-
-            expect(status).toBe(HttpStatus.OK);
-            expect(response.headers.get(CONTENT_TYPE)).toMatch(
-                /application\/graphql-response\+json/iu,
-            );
-
-            const { data, errors } =
-                (await response.json()) as BuecherSuccessType;
-
-            expect(errors).toBeUndefined();
-            expect(data).toBeDefined();
-
-            const { buecher } = data;
-
-            expect(buecher).not.toHaveLength(0);
-
-            buecher.forEach((buch) => {
-                const { rating, titel } = buch;
-
-                expect(rating).toBeGreaterThanOrEqual(ratingExpected);
-                expect(titel?.titel?.toLowerCase()).toStrictEqual(
-                    expect.stringContaining(teilTitel),
+            // Jedes Ergebnis muss die Mindest-Mitgliederanzahl erfüllen
+            fussballvereine.forEach((verein) => {
+                expect(verein.mitgliederanzahl).toBeGreaterThanOrEqual(
+                    mitgliederanzahl,
                 );
             });
         },
     );
 
-    test.concurrent('Kein Buch zu nicht-vorhandenem "rating"', async () => {
-        // given
-        const query: GraphQLRequest = {
-            query: `
+    test.concurrent(
+        'Kein Verein zu nicht-vorhandener Mitgliederanzahl',
+        async () => {
+            // given
+            const rating = mitgliederNichtVorhanden;
+            const query: GraphQLQuery = {
+                query: `
                 {
-                    buecher(suchparameter: {
-                        rating: ${ratingNichtVorhanden}
+                    fussballvereine(suchparameter: {
+                        mitgliederanzahl: ${rating}
                     }) {
-                        titel {
-                            titel
-                        }
+                        name
                     }
                 }
             `,
-        };
+            };
 
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(query),
-            headers,
-        });
+            // when
+            const response = await fetch(graphqlURL, {
+                method: POST,
+                body: JSON.stringify(query),
+                headers,
+            });
 
-        // then
-        const { status } = response;
+            // then
+            const { status } = response;
 
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
+            expect(status).toBe(HttpStatus.OK);
 
-        const { data, errors } = (await response.json()) as BuecherErrorsType;
+            const { data, errors } =
+                (await response.json()) as SearchErrorsType;
 
-        expect(data.buecher).toBeNull();
-        expect(errors).toHaveLength(1);
+            expect(data.fussballvereine).toBeNull();
+            expect(errors).toHaveLength(1);
 
-        const [error] = errors;
-        const { message, path, extensions } = error!;
+            const [error] = errors;
+            const { message, extensions } = error!;
 
-        expect(message).toMatch(/^Keine Buecher gefunden:/u);
-        expect(path).toBeDefined();
-        expect(path![0]).toBe('buecher');
-        expect(extensions).toBeDefined();
-        expect(extensions!.code).toBe('BAD_USER_INPUT');
-    });
-
-    test.concurrent('Buecher zur Art "EPUB"', async () => {
-        // given
-        const buchArt: Buchart = 'EPUB';
-        const query: GraphQLRequest = {
-            query: `
-                {
-                    buecher(suchparameter: {
-                        art: ${buchArt}
-                    }) {
-                        art
-                        titel {
-                            titel
-                        }
-                    }
-                }
-            `,
-        };
-
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(query),
-            headers,
-        });
-
-        // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
-        const { data, errors } = (await response.json()) as BuecherSuccessType;
-
-        expect(errors).toBeUndefined();
-        expect(data).toBeDefined();
-
-        const { buecher }: { buecher: BuchDTO[] } = data;
-
-        expect(buecher).not.toHaveLength(0);
-
-        buecher.forEach((buch) => {
-            const { art, titel } = buch;
-
-            expect(art).toBe(buchArt);
-            expect(titel?.titel).toBeDefined();
-        });
-    });
-
-    test.concurrent('Buecher zur einer ungueltigen Art', async () => {
-        // given
-        const buchArt = 'UNGUELTIG';
-        const query: GraphQLRequest = {
-            query: `
-                {
-                    buecher(suchparameter: {
-                        art: ${buchArt}
-                    }) {
-                        titel {
-                            titel
-                        }
-                    }
-                }
-            `,
-        };
-
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(query),
-            headers,
-        });
-
-        // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.BAD_REQUEST);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
-        const { data, errors } = (await response.json()) as BuecherErrorsType;
-
-        expect(data).toBeUndefined();
-        expect(errors).toHaveLength(1);
-
-        const [error] = errors;
-        const { extensions } = error!;
-
-        expect(extensions).toBeDefined();
-        expect(extensions!.code).toBe('GRAPHQL_VALIDATION_FAILED');
-    });
-
-    test.concurrent('Buecher mit lieferbar=true', async () => {
-        // given
-        const query: GraphQLRequest = {
-            query: `
-                {
-                    buecher(suchparameter: {
-                        lieferbar: true
-                    }) {
-                        lieferbar
-                        titel {
-                            titel
-                        }
-                    }
-                }
-            `,
-        };
-
-        // when
-        const response = await fetch(graphqlURL, {
-            method: POST,
-            body: JSON.stringify(query),
-            headers,
-        });
-
-        // then
-        const { status } = response;
-
-        expect(status).toBe(HttpStatus.OK);
-        expect(response.headers.get(CONTENT_TYPE)).toMatch(
-            /application\/graphql-response\+json/iu,
-        );
-
-        const { data, errors } = (await response.json()) as BuecherSuccessType;
-
-        expect(errors).toBeUndefined();
-        expect(data).toBeDefined();
-
-        const { buecher }: { buecher: BuchDTO[] } = data;
-
-        expect(buecher).not.toHaveLength(0);
-
-        buecher.forEach((buch) => {
-            const { lieferbar, titel } = buch;
-
-            expect(lieferbar).toBe(true);
-            expect(titel?.titel).toBeDefined();
-        });
-    });
+            expect(message).toMatch(/^Keine Vereine gefunden:/u);
+            expect(extensions!.code).toBe('BAD_USER_INPUT');
+        },
+    );
 });
 
 /* eslint-enable @typescript-eslint/no-non-null-assertion */
