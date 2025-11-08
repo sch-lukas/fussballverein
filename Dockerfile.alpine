@@ -1,6 +1,6 @@
 # syntax=docker.io/docker/dockerfile-upstream:1.19.0
 # check=error=true
-# Dockerfile fuer Fussballverein mit Basis-Image Alpine
+# Dockerfile für Fussballverein mit Basis-Image Alpine
 # Multi-Stage-Build
 # Aufruf: docker build --tag juergenzimmermann/fussballverein:2025.10.1-alpine -f Dockerfile.alpine .
 # ggf. --progress=plain oder --no-cache
@@ -12,42 +12,29 @@ ARG NODE_VERSION=24.9.0
 # ---------------------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-alpine3.22 AS dist
 
-# 🔹 Corepack komplett deaktivieren und pnpm stabil installieren
+# 🔹 Corepack deaktivieren und pnpm stabil installieren
 ENV COREPACK_ENABLE_STRICT=0
 ENV COREPACK_HOME=/dev/null
 RUN npm uninstall -g corepack || true && npm install -g pnpm@10.18.2
 
-# ggf. Python fuer Argon2
-ENV PYTHONUNBUFFERED=1
-
-RUN <<EOF
-set -eux
-apk update
-apk upgrade
-apk add --update --no-cache python3 py3-pip make gcc g++ build-base
-ln -sf python3 /usr/bin/python
-EOF
+# 🔹 Python / Build Tools (z. B. für Argon2 oder Prisma)
+RUN apk add --no-cache python3 py3-pip make gcc g++ build-base
 
 USER node
 WORKDIR /home/node
-RUN mkdir -p /home/node/src/generated/prisma && \
-    chown -R node:node /home/node/src
+RUN mkdir -p /home/node/src/generated/prisma && chown -R node:node /home/node/src
 
+# ✅ NEUER, fehlerfreier Build-Schritt
+COPY package.json pnpm-lock.yaml tsconfig.json tsconfig.build.json ./
+COPY src ./src
+COPY prisma ./prisma
+COPY scripts ./scripts
 
-# Build-Schritt mit pnpm
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-    --mount=type=bind,source=tsconfig.json,target=tsconfig.json \
-    --mount=type=bind,source=tsconfig.build.json,target=tsconfig.build.json \
-    --mount=type=bind,source=src,target=src,rw \
-    --mount=type=bind,source=prisma,target=prisma \
-    --mount=type=bind,source=scripts,target=scripts \
-    --mount=type=cache,target=/root/.pnpm <<EOF
-set -eux
-pnpm install --prefer-frozen-lockfile
-rm node_modules/.bin/node
-pnpm run build
-EOF
+RUN --mount=type=cache,target=/root/.pnpm \
+    set -eux && \
+    pnpm install --prefer-frozen-lockfile && \
+    rm -f node_modules/.bin/node && \
+    pnpm run build
 
 
 # ---------------------------------------------------------------------------------------
@@ -60,26 +47,15 @@ ENV COREPACK_ENABLE_STRICT=0
 ENV COREPACK_HOME=/dev/null
 RUN npm uninstall -g corepack || true && npm install -g pnpm@10.18.2
 
-RUN <<EOF
-set -eux
-apk update
-apk upgrade
-apk add --update --no-cache python3 py3-pip make gcc g++ build-base
-ln -sf python3 /usr/bin/python
-EOF
+RUN apk add --no-cache python3 py3-pip make gcc g++ build-base
 
 USER node
 WORKDIR /home/node
-RUN mkdir -p /home/node/src/generated/prisma && \
-    chown -R node:node /home/node/src
+RUN mkdir -p /home/node/src/generated/prisma && chown -R node:node /home/node/src
 
-
-RUN --mount=type=bind,source=package.json,target=package.json \
-    --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
-    --mount=type=cache,target=/root/.pnpm <<EOF
-set -eux
-pnpm install -P --prefer-frozen-lockfile
-EOF
+COPY package.json pnpm-lock.yaml ./
+RUN --mount=type=cache,target=/root/.pnpm \
+    pnpm install -P --prefer-frozen-lockfile
 
 
 # ---------------------------------------------------------------------------------------
@@ -92,26 +68,19 @@ ENV COREPACK_ENABLE_STRICT=0
 ENV COREPACK_HOME=/dev/null
 RUN npm uninstall -g corepack || true && npm install -g pnpm@10.18.2
 
-# Metadaten
+# 🔹 Metadaten
 LABEL org.opencontainers.image.title="fussballverein" \
   org.opencontainers.image.description="Appserver fussballverein mit Basis-Image Alpine" \
   org.opencontainers.image.version="2025.10.1-alpine" \
   org.opencontainers.image.licenses="GPL-3.0-or-later" \
   org.opencontainers.image.authors="jule1011@h-ka.de"
 
-RUN <<EOF
-set -eux
-apk update
-apk upgrade
-apk add --update --no-cache wget=1.25.0-r1
-apk cache clean
-rm -rf /tmp/*
-EOF
+RUN apk add --no-cache wget=1.25.0-r1
 
 WORKDIR /opt/app
 USER node
 
-# Dateien aus vorherigen Stages übernehmen
+# 🔹 Dateien aus vorherigen Stages übernehmen
 COPY --chown=node:node package.json .env ./
 COPY --from=dependencies --chown=node:node /home/node/node_modules ./node_modules
 COPY --from=dist --chown=node:node /home/node/dist ./dist
@@ -122,4 +91,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --retries=1 \
   CMD wget -qO- --no-check-certificate https://localhost:3000/health/readiness/ | grep ok || exit 1
 
-ENTRYPOINT ["/usr/local/bin/node", "dist/main.js"]
+ENTRYPOINT ["node", "dist/main.js"]
