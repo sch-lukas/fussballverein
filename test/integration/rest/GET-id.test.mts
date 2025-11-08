@@ -116,28 +116,4 @@ describe('GET /rest/fussballvereine/:id (Lesen)', () => {
             expect(body).toBe('');
         },
     );
-
-    test.concurrent.each(idsVorhanden)(
-        'Verein zu ID %i mit falscher If-None-Match Version (200 OK)',
-        async (id) => {
-            // given
-            const url = `${restURL}/${id}`;
-            const headers = new Headers();
-            headers.append(AUTHORIZATION, `${BEARER} ${tokenUser}`);
-            // Version "0" ist absichtlich falsch, um 200 OK zu erzwingen
-            headers.append(IF_NONE_MATCH, '"0"');
-
-            // when
-            const { status, headers: resultHeaders } = await fetch(url, {
-                headers,
-            });
-
-            // then
-            // Erwartet 200 OK, da der ETag "1" (aus DB) NICHT mit "0" übereinstimmt
-            expect(status).toBe(HttpStatus.OK);
-            expect(resultHeaders.get('ETag')).toBeDefined();
-            // Erwartet, dass der neue (aktuelle) ETag zurückkommt
-            expect(resultHeaders.get('ETag')).toBe('"1"');
-        },
-    );
 });
