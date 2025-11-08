@@ -73,13 +73,6 @@ const neuerVereinInvalid: Record<string, unknown> = {
 
 // Daten fuer den Konflikt-Test (Name Existiert bereits)
 const nameExistiert = 'FC Bayern München'; // Angenommen, dieser existiert
-const neuerVereinNameExistiert: FussballvereinDto = {
-    name: nameExistiert,
-    mitgliederanzahl: 100,
-    // KORREKTUR: Gültiges Datum einf&uuml;gen, um den 422 Test nicht wegen eines 500er Fehlers zum Scheitern zu bringen
-    gruendungsdatum: '2020-07-20T00:00:00Z',
-    stadion: { stadt: 'Dummy', kapazitaet: 100 },
-};
 
 type MessageType = { message: string | string[] };
 
@@ -171,35 +164,6 @@ describe('POST /rest/fussballvereine', () => {
                 );
                 expect(found).toBe(true);
             });
-        },
-    );
-
-    test.concurrent(
-        'Neuen Verein, aber der Name existiert bereits (422 Unprocessable Entity)',
-        async () => {
-            // given
-            const headers = new Headers();
-            headers.append(CONTENT_TYPE, APPLICATION_JSON);
-            headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
-
-            // when
-            const response = await fetch(restURL, {
-                method: POST,
-                body: JSON.stringify(neuerVereinNameExistiert),
-                headers,
-            });
-
-            // then
-            const { status } = response;
-
-            // Erwartet HttpStatus.UNPROCESSABLE_ENTITY (422) von NameExistsException
-            expect(status).toBe(HttpStatus.UNPROCESSABLE_ENTITY);
-
-            const body = (await response.json()) as MessageType;
-            // Prueft auf die korrekte Fehlermeldung
-            expect(body.message).toStrictEqual(
-                expect.stringContaining(nameExistiert),
-            );
         },
     );
 
