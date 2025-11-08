@@ -72,6 +72,7 @@ export class FussballvereinGetController {
      */
     // eslint-disable-next-line max-params
     @Get(':id')
+    //@Public()
     @Roles('admin', 'user')
     @ApiOperation({ summary: 'Suche mit der ID des Fussballvereins' })
     @ApiParam({ name: 'id', description: 'Z.B. 1' })
