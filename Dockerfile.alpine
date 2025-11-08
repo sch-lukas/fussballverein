@@ -30,13 +30,18 @@ EOF
 
 USER node
 WORKDIR /home/node
+RUN mkdir -p /home/node/src/generated/prisma && \
+    chown -R node:node /home/node/src
+
 
 # Build-Schritt mit pnpm
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \
     --mount=type=bind,source=tsconfig.json,target=tsconfig.json \
     --mount=type=bind,source=tsconfig.build.json,target=tsconfig.build.json \
-    --mount=type=bind,source=src,target=src \
+    --mount=type=bind,source=src,target=src,rw \
+    --mount=type=bind,source=prisma,target=prisma \
+    --mount=type=bind,source=scripts,target=scripts \
     --mount=type=cache,target=/root/.pnpm <<EOF
 set -eux
 pnpm install --prefer-frozen-lockfile
@@ -65,6 +70,9 @@ EOF
 
 USER node
 WORKDIR /home/node
+RUN mkdir -p /home/node/src/generated/prisma && \
+    chown -R node:node /home/node/src
+
 
 RUN --mount=type=bind,source=package.json,target=package.json \
     --mount=type=bind,source=pnpm-lock.yaml,target=pnpm-lock.yaml \

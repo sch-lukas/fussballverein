@@ -7,7 +7,7 @@ dist
 log
 node_modules
 test
-prisma/schema.prisma
+#prisma/schema.prisma
 src/config/resources/tls/private-key.pem
 .depcheckrc.yml
 .editorconfig

@@ -174,5 +174,8 @@
       "version": "25.0.0",
       "onFail": "download"
     }
+  },
+  "prisma": {
+    "schema": "prisma/schema.prisma"
   }
 }
