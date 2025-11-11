@@ -10,6 +10,30 @@ import {
 } from '../constants.mjs';
 import { getToken } from '../token.mjs';
 
+// ----------------------------------------------------------
+// Typdefinitionen für GraphQL-Antworten
+// ----------------------------------------------------------
+
+type GraphQLResponse<T> = {
+    data: T;
+};
+
+type CreateResponse = {
+    create: {
+        id: string;
+    };
+};
+
+type DeleteResponse = {
+    delete: {
+        success: boolean;
+    };
+};
+
+// ----------------------------------------------------------
+// Setup
+// ----------------------------------------------------------
+
 let tokenAdmin: string;
 
 const gqlFetch = async (query: string) => {
@@ -24,6 +48,10 @@ const gqlFetch = async (query: string) => {
         headers,
     });
 };
+
+// ----------------------------------------------------------
+// Tests
+// ----------------------------------------------------------
 
 describe('GraphQL Mutation (Minimaltest)', () => {
     let createdId: string;
@@ -49,7 +77,7 @@ describe('GraphQL Mutation (Minimaltest)', () => {
 
         expect(response.status).toBe(200);
 
-        const body = await response.json();
+        const body = (await response.json()) as GraphQLResponse<CreateResponse>;
 
         expect(body.data.create.id).toBeDefined();
 
@@ -69,7 +97,7 @@ describe('GraphQL Mutation (Minimaltest)', () => {
 
         expect(response.status).toBe(200);
 
-        const body = await response.json();
+        const body = (await response.json()) as GraphQLResponse<DeleteResponse>;
 
         expect(body.data.delete.success).toBe(true);
     });
