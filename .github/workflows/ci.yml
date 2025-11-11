@@ -35,14 +35,12 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      # 🧩 Setup Node.js (ohne Cache!)
+      # ⬇️ Kein 'cache:' Input -> Cache ist aus
       - name: 🧩 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: false
 
-      # 📦 Install pnpm direkt nach Node-Setup
       - name: 📦 Install pnpm globally
         run: |
           npm install -g pnpm@9
@@ -72,7 +70,6 @@ jobs:
     steps:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
-
       - name: 🔍 Run Super-Linter
         uses: github/super-linter/slim@v6
         env:
