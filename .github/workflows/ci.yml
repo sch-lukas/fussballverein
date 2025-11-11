@@ -36,10 +36,22 @@ jobs:
           node-version: 20
           cache: "pnpm"
 
-      - name: 📦 Setup pnpm
-        uses: pnpm/action-setup@v3
-        with:
-          version: 9
+      # ▶️ pnpm zuverlässig aktivieren (Corepack ist bei Node 20 dabei)
+      - name: 🔧 Enable Corepack (pnpm)
+        run: |
+          corepack enable
+          corepack prepare pnpm@9 --activate
+
+      # (Optional – alternativ zum Corepack-Schritt; kann auch weggelassen werden)
+      # - name: 📦 Setup pnpm
+      #   uses: pnpm/action-setup@v4
+      #   with:
+      #     version: 9
+
+      - name: 🔎 Show versions
+        run: |
+          node -v
+          pnpm -v
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
