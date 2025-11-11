@@ -71,6 +71,12 @@ jobs:
       - name: 🏗️ Build application
         run: pnpm run build
 
+      - name: Ensure .env exists for Docker build
+        run: |
+          if [ ! -f .env ]; then
+            echo "CI_ENV=true" > .env
+          fi
+
       - name: 🐳 Build Docker image
         run: docker build -f Dockerfile -t fussballverein:ci .
 
