@@ -12,10 +12,6 @@ jobs:
   build-test-lint:
     name: Lint, Test & Build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./
-
     services:
       postgres:
         image: postgres:16
@@ -35,7 +31,6 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      # ⬇️ Kein 'cache:' Input -> Cache ist aus
       - name: 🧩 Setup Node.js
         uses: actions/setup-node@v4
         with:
@@ -45,6 +40,7 @@ jobs:
         run: |
           npm install -g pnpm@9
           echo "✅ pnpm installed, version:"
+          cd /
           pnpm -v
 
       - name: 📥 Install dependencies
@@ -70,6 +66,7 @@ jobs:
     steps:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
+
       - name: 🔍 Run Super-Linter
         uses: github/super-linter/slim@v6
         env:
