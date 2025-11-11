@@ -66,6 +66,7 @@ jobs:
       - name: 🧪 Run Tests (Vitest)
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fussballverein?schema=public"
+          CI: true
         run: pnpm test || echo "Tests failed but workflow continues"
 
       - name: 🏗️ Build application
