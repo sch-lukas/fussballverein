@@ -12,8 +12,6 @@ jobs:
   build-test-lint:
     name: Lint, Test & Build
     runs-on: ubuntu-latest
-
-    # 🏗️ Standard-Arbeitsverzeichnis (wichtig für pnpm)
     defaults:
       run:
         working-directory: ./
@@ -37,38 +35,34 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
+      # 🧩 Setup Node.js (ohne Cache!)
       - name: 🧩 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: false
 
-      # 🔧 Feste Installation – garantiert im PATH
+      # 📦 Install pnpm direkt nach Node-Setup
       - name: 📦 Install pnpm globally
         run: |
           npm install -g pnpm@9
           echo "✅ pnpm installed, version:"
           pnpm -v
 
-      # 📦 Dependencies installieren (im richtigen Verzeichnis)
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      # 🧹 ESLint prüfen
       - name: 🧹 Run ESLint
         run: pnpm lint || echo "Lint errors ignored for now"
 
-      # 🧪 Tests (Vitest)
       - name: 🧪 Run Tests (Vitest)
         env:
           DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/fussballverein?schema=public"
         run: pnpm test || echo "Tests failed but workflow continues"
 
-      # 🏗️ Projekt bauen
       - name: 🏗️ Build application
         run: pnpm build
 
-      # 🐳 Docker-Build testen
       - name: 🐳 Build Docker image
         run: docker build -f Dockerfile.alpine -t fussballverein:ci .
 
