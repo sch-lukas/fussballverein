@@ -72,7 +72,7 @@ jobs:
         run: pnpm run build
 
       - name: 🐳 Build Docker image
-        run: docker build -f Dockerfile.alpine -t fussballverein:ci .
+        run: docker build -f Dockerfile -t fussballverein:ci .
 
   super-linter:
     name: Super Linter
