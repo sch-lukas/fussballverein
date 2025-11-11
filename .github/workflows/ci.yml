@@ -30,17 +30,15 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🧩 Setup Node.js and pnpm
+      - name: 🧩 Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
 
-      - name: 🔧 Enable Corepack and prepare pnpm
-        shell: bash
+      # 🔧 Feste Installation – garantiert im PATH
+      - name: 📦 Install pnpm globally
         run: |
-          corepack enable
-          corepack prepare pnpm@9 --activate
+          npm install -g pnpm@9
           echo "pnpm version:"
           pnpm -v
 
