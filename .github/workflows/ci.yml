@@ -1,4 +1,4 @@
-name: CI Pipeline - Fussballverein
+name: CI
 
 on:
   push:
@@ -12,6 +12,7 @@ jobs:
   build-test-lint:
     name: Lint, Test & Build
     runs-on: ubuntu-latest
+
     services:
       postgres:
         image: postgres:16
@@ -31,17 +32,32 @@ jobs:
       - name: 🧾 Checkout repository
         uses: actions/checkout@v4
 
-      - name: 🧩 Setup Node.js
+      # Node 24.8.x – passend zu engines.node
+      - name: 🧩 Setup Node.js (v24.8)
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24.8.0
+          check-latest: true
 
-      - name: 📦 Install pnpm globally
-        run: |
-          npm install -g pnpm@9
-          echo "✅ pnpm installed, version:"
-          cd /
-          pnpm -v
+      # pnpm 10.18.3 – passend zu engines.pnpm
+      - name: 📦 Setup pnpm (v10)
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.18.3
+
+      # pnpm-Store-Pfad ermitteln
+      - name: ♻️ Resolve pnpm store path
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      # Cache für pnpm-Store
+      - name: 💾 Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: 📥 Install dependencies
         run: pnpm install --frozen-lockfile
