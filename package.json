@@ -56,7 +56,8 @@
     "revealjs": "asciidoctor-revealjs .extras/doc/folien/folien.adoc",
     "sonar": "node scripts/sonar-scanner.mts",
     "tsc": "tsc --pretty",
-    "tsgo": "tsgo --project tsconfig.json"
+    "tsgo": "tsgo --project tsconfig.json",
+    "lint": "eslint . --ext .ts,.mts,.js"
   },
   "dependencies": {
     "@apollo/server": "5.1.0",
