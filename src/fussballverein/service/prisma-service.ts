@@ -28,8 +28,6 @@ export class PrismaService implements OnModuleInit {
     readonly #logger = getLogger(PrismaService.name);
 
     constructor() {
-        // PrismaClient fuer DB "buch" (siehe Umgebungsvariable DATABASE_URL in ".env")
-        // d.h. mit PostgreSQL-User "buch" und Schema "buch"
         const adapter = new PrismaPg({
             connectionString: process.env['DATABASE_URL'],
         });

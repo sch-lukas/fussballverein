@@ -56,7 +56,6 @@ export class FussballvereinQueryResolver {
     ): Promise<Readonly<FussballvereinMitAllen>> {
         this.#logger.debug('findById: id=%s', id);
 
-        // Bei der Detailansicht typischerweise alle Relationen laden
         const verein = await this.#service.findById({
             id: Number(id),
             mitSpielern: true,

@@ -81,7 +81,7 @@ describe('GraphQL Mutation (Minimaltest)', () => {
 
         expect(body.data.create.id).toBeDefined();
 
-        createdId = body.data.create.id; // speichern für später
+        createdId = body.data.create.id;
     });
 
     test('Verein wieder löschen (DB Zustand wiederherstellen)', async () => {

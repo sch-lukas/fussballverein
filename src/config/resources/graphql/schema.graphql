@@ -7,7 +7,7 @@ schema {
 }
 
 # ----------------------------------------------------------------------
-# LESE-OPERATIONEN (Behebt deinen Fehler)
+# LESE-OPERATIONEN
 # ----------------------------------------------------------------------
 "Funktionen, um Vereinsdaten zu lesen"
 type Query {
@@ -40,7 +40,7 @@ type Mutation {
 }
 
 # ----------------------------------------------------------------------
-# OBJEKT-TYPEN (Das Senden wir an den Client)
+# OBJEKT-TYPEN
 # ----------------------------------------------------------------------
 
 "Daten zum Stadion eines Vereins (1:1-Beziehung)"
@@ -77,20 +77,16 @@ type Fussballverein {
 
   "1:n-Beziehung zu den Spielern"
   spieler: [Spieler!]
-
-  # Das Logo (bytea) wird über den REST-Endpunkt (GET /rest/logo/:id)
-  # ausgeliefert und ist daher nicht Teil des GraphQL-Schemas.
 }
 
 # ----------------------------------------------------------------------
-# INPUT-TYPEN (Das Empfangen wir vom Client)
+# INPUT-TYPEN
 # ----------------------------------------------------------------------
 
 "Suchparameter für die Vereinssuche (Query)"
 input FussballvereinSuchparameterInput {
   name: String
   mitgliederanzahl: Int
-  # Du kannst hier weitere Filter hinzufügen, z.B. stadt aus Stadion
 }
 
 "Daten für ein neues Stadion (Teil von FussballvereinInput)"
@@ -127,15 +123,12 @@ input FussballvereinInput {
 
 "Daten für ein zu änderndes Buch (Mutation)"
 input FussballvereinUpdateInput {
-  # ID und Version kommen aus Param/Header, nicht aus dem Body
   name: String
   gruendungsdatum: String
   website: String
   email: String
   telefonnummer: String
   mitgliederanzahl: Int
-  # Das Ändern von Relationen (Stadion/Spieler) wird hier
-  # der Einfachheit halber weggelassen
 }
 
 # ----------------------------------------------------------------------

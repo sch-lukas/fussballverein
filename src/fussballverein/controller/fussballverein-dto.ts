@@ -46,7 +46,7 @@ export class FussballvereinDtoOhneRef {
     @ApiProperty({ example: 'kontakt@fcbayern.com', type: String })
     readonly email?: string;
 
-    @IsPhoneNumber('DE') // Validiert deutsche Telefonnummern
+    @IsPhoneNumber('DE')
     @IsOptional()
     @ApiProperty({ example: '+49-89-699310', type: String })
     readonly telefonnummer?: string;
@@ -66,15 +66,15 @@ export class FussballvereinDtoOhneRef {
  */
 export class FussballvereinDto extends FussballvereinDtoOhneRef {
     @IsOptional()
-    @ValidateNested() // Wichtig: Validiert das verschachtelte StadionDto-Objekt
-    @Type(() => StadionDto) // Wichtig: Wandelt das einfache Objekt in eine StadionDto-Klasse um
+    @ValidateNested()
+    @Type(() => StadionDto)
     @ApiProperty({ type: StadionDto })
     readonly stadion?: StadionDto;
 
     @IsOptional()
     @IsArray()
-    @ValidateNested({ each: true }) // Wichtig: Validiert jedes SpielerDto-Objekt im Array
-    @Type(() => SpielerDto) // Wichtig: Wandelt jedes Objekt im Array in eine SpielerDto-Klasse um
+    @ValidateNested({ each: true })
+    @Type(() => SpielerDto)
     @ApiProperty({ type: [SpielerDto] })
     readonly spieler?: SpielerDto[];
 }

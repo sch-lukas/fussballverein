@@ -49,6 +49,7 @@ describe('GET /rest/fussballvereine/:id (Lesen)', () => {
             expect(responseHeaders.get('ETag')).toBeDefined();
 
             const body = (await response.json()) as { id: number };
+
             expect(body.id).toBe(id);
         },
     );
@@ -96,7 +97,9 @@ describe('GET /rest/fussballvereine/:id (Lesen)', () => {
 
             // Wenn der Token korrekt ist, sollte 200 OK kommen
             expect(initialResponse.status).toBe(HttpStatus.OK);
+
             const actualETag = initialResponse.headers.get('ETag');
+
             expect(actualETag).toBeDefined();
 
             // 2. Erneuten Request mit If-None-Match und Auth senden
@@ -112,7 +115,9 @@ describe('GET /rest/fussballvereine/:id (Lesen)', () => {
             // then
             // Erwartet 304, da If-None-Match = ETag
             expect(status).toBe(HttpStatus.NOT_MODIFIED);
+
             const body = await response.text();
+
             expect(body).toBe('');
         },
     );

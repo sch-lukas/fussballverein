@@ -21,7 +21,7 @@
 
 // Typdefinition für `find`
 export type Suchparameter = {
-    /** Teilstring-Suche (case-insensitive) auf dem Vereinsnamen */
+    /** Teilstring-Suche auf dem Vereinsnamen */
     readonly name?: string;
 
     /**
@@ -30,7 +30,7 @@ export type Suchparameter = {
      */
     readonly gruendungsdatum?: string;
 
-    /** Teilstring-Suche (case-insensitive) auf der Stadt des Stadions */
+    /** Teilstring-Suche auf der Stadt des Stadions */
     readonly stadt?: string;
 
     /** Exakte Suche auf Website (falls benötigt) */
@@ -49,7 +49,7 @@ export type Suchparameter = {
     readonly mitgliederanzahl?: number | string;
 
     /**
-     * Stadion-Kapazität (optional, falls du später Filter im WhereBuilder ergänzt).
+     * Stadion-Kapazität
      */
     readonly kapazitaet?: number | string;
 };

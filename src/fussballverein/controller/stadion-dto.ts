@@ -22,8 +22,8 @@ export class StadionDto {
     readonly stadt!: string;
 
     @IsInt()
-    @Min(1) // Ein Stadion sollte mindestens 1 Platz haben
-    @Max(200000) // Obergrenze für die Kapazität
+    @Min(1)
+    @Max(200000)
     @ApiProperty({ example: 75000, type: Number, minimum: 1, maximum: 200000 })
     readonly kapazitaet!: number;
 

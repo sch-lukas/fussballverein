@@ -13,6 +13,11 @@
 // You should have received a copy of the GNU General Public License
 // along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+/**
+ * Definiert die Struktur für ein Paginierungsergebnis.
+ * @property content Die Datensätze der aktuellen Seite.
+ * @property totalElements Die Gesamtanzahl aller Datensätze (über alle Seiten).
+ */
 export type Slice<T> = {
     readonly content: T[];
     readonly totalElements: number;

@@ -22,12 +22,11 @@ import { getToken } from '../token.mjs';
 
 // Daten fuer einen neuen, vollstaendigen Verein (inkl. Stadion und Spieler)
 const neuerVerein: FussballvereinDto = {
-    name: `Testverein ${Date.now()}`, // Eindeutigen Namen generieren
+    name: `Testverein ${Date.now()}`,
     mitgliederanzahl: 50000,
     website: 'https://testverein-neu.com',
     email: 'kontakt@testverein-neu.com',
     telefonnummer: '+49-30-123456',
-    // KORREKTUR: Vollstaendiges ISO-8601 Format fuer Prisma
     gruendungsdatum: '2020-07-20T00:00:00Z',
     stadion: {
         stadt: 'Berlin',
@@ -53,7 +52,6 @@ const neuerVerein: FussballvereinDto = {
 
 // Daten mit absichtlich ungueltigen Werten zur Validierung
 const neuerVereinInvalid: Record<string, unknown> = {
-    // name: 'a', <--- ENTFERNT, da dies g&uuml;ltig ist (keine MinLength)
     mitgliederanzahl: -1, // Muss >= 0 sein
     website: 'keine-url', // Falsche URL
     email: 'keine-email', // Falsches Format
@@ -71,8 +69,8 @@ const neuerVereinInvalid: Record<string, unknown> = {
     ],
 };
 
-// Daten fuer den Konflikt-Test (Name Existiert bereits)
-const nameExistiert = 'FC Bayern München'; // Angenommen, dieser existiert
+// Daten fuer den Konflikt-Test
+// const nameExistiert = 'FC Bayern München';
 
 type MessageType = { message: string | string[] };
 
@@ -93,7 +91,7 @@ describe('POST /rest/fussballvereine', () => {
         // given
         const headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
-        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`); // Admin-Token
+        headers.append(AUTHORIZATION, `${BEARER} ${tokenAdmin}`);
 
         // when
         const response = await fetch(restURL, {
@@ -104,22 +102,21 @@ describe('POST /rest/fussballvereine', () => {
 
         // then
         const { status } = response;
+
         expect(status).toBe(HttpStatus.CREATED);
 
         const responseHeaders = response.headers;
         const location = responseHeaders.get(LOCATION);
 
-        // Pruefe Location-Header
         expect(location).toBeDefined();
 
-        // Extrahiere die ID aus dem Location-Header
         const indexLastSlash = location?.lastIndexOf('/') ?? -1;
+
         expect(indexLastSlash).not.toBe(-1);
 
         const idStr = location?.slice(indexLastSlash + 1);
 
         expect(idStr).toBeDefined();
-        // Pruefe, ob die ID das korrekte Muster hat
         expect(FussballvereinService.ID_PATTERN.test(idStr ?? '')).toBe(true);
     });
 
@@ -151,6 +148,7 @@ describe('POST /rest/fussballvereine', () => {
 
             // then
             const { status } = response;
+
             expect(status).toBe(HttpStatus.BAD_REQUEST);
 
             const body = (await response.json()) as MessageType;
@@ -158,10 +156,12 @@ describe('POST /rest/fussballvereine', () => {
 
             expect(messages).toBeDefined();
             // Prueft, ob die Meldungen alle erwarteten ungueltigen Felder referenzieren
+
             expectedMsgContains.forEach((expectedPart) => {
                 const found = messages.some((msg) =>
                     msg.includes(expectedPart),
                 );
+
                 expect(found).toBe(true);
             });
         },

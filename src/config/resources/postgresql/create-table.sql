@@ -75,15 +75,11 @@ CREATE INDEX IF NOT EXISTS spieler_fussballverein_id_idx
 -- ================================================================
 CREATE TABLE IF NOT EXISTS logo_file (
     id                 integer GENERATED ALWAYS AS IDENTITY(START WITH 1000) PRIMARY KEY,
-    data               bytea NOT NULL,          -- Binärdaten des Logos
-    filename           text NOT NULL,           -- z.B. "vereinslogo.png"
-    mimetype           text,                    -- z.B. "image/png"
-    fussballverein_id  integer NOT NULL UNIQUE  -- 1:1-Beziehung
+    data               bytea NOT NULL,
+    filename           text NOT NULL,
+    mimetype           text,
+    fussballverein_id  integer NOT NULL UNIQUE
         REFERENCES fussballverein ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS logo_file_fussballverein_id_idx
     ON logo_file(fussballverein_id);
-
--- ================================================================
--- Ende der SQL-Datei
--- ================================================================

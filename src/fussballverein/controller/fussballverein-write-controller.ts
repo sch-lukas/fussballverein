@@ -49,7 +49,7 @@ import { AuthGuard, Roles } from 'nest-keycloak-connect';
 const MSG_FORBIDDEN = 'Kein Token mit ausreichender Berechtigung vorhanden';
 
 @Controller(paths.rest)
-@UseGuards(AuthGuard) // Annahme: Authentifizierung ist aktiv
+@UseGuards(AuthGuard)
 @UseInterceptors(ResponseTimeInterceptor)
 @ApiTags('Fussballverein REST-API (Schreiben)')
 export class FussballvereinWriteController {
@@ -64,7 +64,7 @@ export class FussballvereinWriteController {
      * Ein neuer Fussballverein wird asynchron angelegt.
      */
     @Post()
-    @Roles('admin', 'user') // Annahme: Rollenbasierte Berechtigung
+    @Roles('admin', 'user')
     @ApiOperation({ summary: 'Einen neuen Fussballverein anlegen' })
     @ApiCreatedResponse({ description: 'Erfolgreich neu angelegt' })
     @ApiBadRequestResponse({ description: 'Fehlerhafte Vereinsdaten' })
@@ -89,7 +89,7 @@ export class FussballvereinWriteController {
      */
     @Post('/logo/:id')
     @Roles('admin', 'user')
-    @UseInterceptors(FileInterceptor('logo')) // Multer für das Feld 'logo'
+    @UseInterceptors(FileInterceptor('logo'))
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Logo für einen Verein hochladen' })
     @ApiCreatedResponse({ description: 'Logo erfolgreich hochgeladen' })
@@ -105,7 +105,6 @@ export class FussballvereinWriteController {
         this.#logger.debug('addLogo: id=%d, file=%s', id, file.originalname);
         const { buffer, originalname, size } = file;
 
-        // Ruft die 'addFile'-Methode aus deinem Service auf
         await this.#service.addFile(id, buffer, originalname, size);
     }
 
@@ -164,7 +163,7 @@ export class FussballvereinWriteController {
      * Ein Fussballverein wird anhand seiner ID gelöscht.
      */
     @Delete(':id')
-    @Roles('admin') // Nur Admins dürfen löschen
+    @Roles('admin')
     @HttpCode(HttpStatus.NO_CONTENT)
     @ApiOperation({ summary: 'Verein mit der ID löschen' })
     @ApiNoContentResponse({
@@ -210,7 +209,6 @@ export class FussballvereinWriteController {
      * Hilfsmethode: Wandelt ein DTO in das Prisma-Format für `update` um.
      */
     #dtoToUpdateInput(dto: FussballvereinDtoOhneRef): FussballvereinUpdate {
-        // KORREKTUR: Cast auf 'any' um den strikten Typ-Check zu umgehen
         return {
             name: dto.name,
             mitgliederanzahl: dto.mitgliederanzahl,
