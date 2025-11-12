@@ -32,7 +32,7 @@ export class InvalidMimeTypeException extends HttpException {
     constructor(mimeType: string | undefined) {
         super(
             `Der MIME-Type ${mimeType} ist nicht zulaessig.`,
-            // TODO https://github.com/nestjs/nest/issues/15624 https://github.com/nodejs/node/blob/main/lib/_http_server.js#L159
+
             HttpStatus.UNPROCESSABLE_ENTITY,
         );
         this.mimeType = mimeType;
