@@ -56,7 +56,6 @@ export class FussballvereinUpdateDTO extends FussballvereinDto {
 }
 
 @Resolver('Fussballverein')
-// alternativ: globale Aktivierung der Guards https://docs.nestjs.com/security/authorization#basic-rbac-implementation
 @UseGuards(AuthGuard)
 @UseFilters(HttpExceptionFilter)
 @UseInterceptors(ResponseTimeInterceptor)
@@ -120,7 +119,6 @@ export class FussballvereinMutationResolver {
     // -------------------------------------------------------------------------
 
     #dtoToCreate(dto: FussballvereinDto): FussballvereinCreate {
-        // Nested Create für Stadion (optional)
         const stadionCreate =
             dto.stadion === undefined
                 ? undefined
@@ -133,7 +131,6 @@ export class FussballvereinMutationResolver {
                       },
                   };
 
-        // Nested Create für Spieler (optional)
         const spielerCreate =
             dto.spieler === undefined
                 ? undefined
@@ -142,7 +139,6 @@ export class FussballvereinMutationResolver {
                           vorname: s.vorname,
                           nachname: s.nachname,
                           alter: s.alter ?? null,
-                          // In deinem Prisma-Client heißt es laut Fehlermeldungen `starkerFuss` (camelCase)
                           starkerFuss: s.starkerFuss ?? null,
                       })),
                   };
@@ -165,8 +161,6 @@ export class FussballvereinMutationResolver {
     }
 
     #dtoToUpdate(dto: FussballvereinUpdateDTO): FussballvereinUpdate {
-        // Hinweis: Nested Updates (stadion/spieler) sind hier bewusst nicht enthalten.
-        // Wenn benötigt, kann man sie analog mit `upsert/update/create/deleteMany` ergänzen.
         const verein: FussballvereinUpdate = {
             name: dto.name,
             gruendungsdatum: dto.gruendungsdatum ?? null,

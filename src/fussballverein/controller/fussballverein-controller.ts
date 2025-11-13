@@ -32,17 +32,12 @@ import { FussballvereinService } from '../service/fussballverein-service.js';
 import { createPageable } from '../service/pageable.js';
 import { type Suchparameter } from '../service/suchparameter.js';
 import { createPage, Page } from './page.js';
-
-// Annahme: Dein Suchparameter-Objekt
 export class FussballvereinQuery implements Suchparameter {
     @ApiProperty({ required: false })
     declare readonly name?: string;
 
     @ApiProperty({ required: false })
     declare readonly mitgliederanzahl?: number;
-
-    // Fügen Sie hier alle Query-Parameter hinzu, die Sie filtern möchten
-    // Z.B. declare readonly website?: string;
 
     @ApiProperty({ required: false })
     declare size?: string;
@@ -84,7 +79,7 @@ export class FussballvereinGetController {
     @ApiOkResponse({
         description: 'Der Verein wurde gefunden',
         type: FussballvereinDto,
-    }) // Nutzt dein DTO
+    })
     @ApiNotFoundResponse({ description: 'Kein Verein zur ID gefunden' })
     @ApiResponse({
         status: HttpStatus.NOT_MODIFIED,
@@ -114,17 +109,15 @@ export class FussballvereinGetController {
             );
         }
 
-        // ETags-Logik (genau wie beim Prof)
+        // ETags-Logik
         const versionDb = verein.version;
         if (version === `"${versionDb}"`) {
             this.#logger.debug('getById: NOT_MODIFIED');
             return res.sendStatus(HttpStatus.NOT_MODIFIED);
         }
         res.header('ETag', `"${versionDb}"`);
-
-        // Wichtig: Rückgabe muss in dein DTO-Format umgewandelt werden
         this.#logger.debug('getById: verein=%o', verein);
-        return res.json(verein); // Angenommen, der Service liefert bereits ein geeignetes Response-Objekt
+        return res.json(verein);
     }
 
     /**
@@ -151,15 +144,13 @@ export class FussballvereinGetController {
 
         const { only } = query;
         if (only === 'count') {
-            // Logik für Zählung (count)
             const count = await this.#service.count(query);
             this.#logger.debug('get: count=%d', count);
             return res.json({ count: count });
         }
 
-        const { page, size } = query; // <-- Destrukturierung (Zeile 154)
+        const { page, size } = query;
 
-        // Entferne Paginierungs-Schlüssel aus Query, um nur Suchparameter zu behalten
         delete query['page'];
         delete query['size'];
         delete query['only'];
@@ -170,7 +161,6 @@ export class FussballvereinGetController {
             size ?? 'undefined',
         );
 
-        // Entferne undefinierte Query-Parameter, um die Suche zu säubern
         const keys = Object.keys(query) as (keyof FussballvereinQuery)[];
         keys.forEach((key) => {
             if (query[key] === undefined) {
@@ -179,7 +169,6 @@ export class FussballvereinGetController {
         });
         this.#logger.debug('get: query (gesäubert)=%o', query);
 
-        // Paginierungs- und Suchlogik implementieren
         const pageable = createPageable({ number: page, size });
         const vereineSlice = await this.#service.find(query, pageable);
         const vereinPage = createPage(vereineSlice, pageable);
@@ -208,15 +197,12 @@ export class FussballvereinGetController {
             throw new NotFoundException(`Die ID ${idStr} ist ungueltig.`);
         }
 
-        // Der Service liefert jetzt direkt das LogoFile-Objekt
         const logoFile = await this.#service.findLogoById(id);
 
-        // Der Controller greift auf die korrekten Felder des LogoFile-Objekts zu
         res.contentType(logoFile.mimetype ?? 'application/octet-stream').set({
             'Content-Disposition': `inline; filename="${logoFile.filename}"`,
         });
 
-        // Schickt den Buffer (logoFile.data) als StreamableFile zurück
         return new StreamableFile(logoFile.data);
     }
 }

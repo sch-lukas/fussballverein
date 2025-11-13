@@ -39,8 +39,7 @@ type SearchErrorsType = { data: { fussballvereine: null }; errors: ErrorsType };
 // -----------------------------------------------------------------------------
 // T e s t d a t e n
 // -----------------------------------------------------------------------------
-const idsVorhanden = [1, 2]; // FC Bayern München, TSG Hoffenheim
-
+const idsVorhanden = [1, 2];
 const nameArray = ['bayern', 'tsg'];
 const nameNichtVorhanden = ['bundesliga', 'regionalliga'];
 const mitgliederMin = [10000, 100000];
@@ -57,7 +56,6 @@ describe('GraphQL Queries (Fussballverein)', () => {
         headers = new Headers();
         headers.append(CONTENT_TYPE, APPLICATION_JSON);
         headers.append(ACCEPT, GRAPHQL_RESPONSE_JSON);
-        // Kein Authorization-Header nötig, da Queries @Public() sind
     });
 
     // -------------------------------------------------------------------------
@@ -97,6 +95,7 @@ describe('GraphQL Queries (Fussballverein)', () => {
 
             // then
             const { status } = response;
+
             expect(status).toBe(HttpStatus.OK);
             expect(response.headers.get(CONTENT_TYPE)).toMatch(
                 /application\/graphql-response\+json/iu,
@@ -234,6 +233,7 @@ describe('GraphQL Queries (Fussballverein)', () => {
 
             // then
             const { status } = response;
+
             expect(status).toBe(HttpStatus.OK);
 
             const { data, errors } =

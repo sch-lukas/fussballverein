@@ -48,17 +48,13 @@ export type FussballvereinUpdate = Prisma.FussballvereinUpdateInput;
 
 /** Typdefinitionen zum Aktualisieren eines Vereins mit `update`. */
 export type UpdateParams = {
-    /** ID des zu aktualisierenden Vereins. */
     readonly id: number | undefined;
-    /** Objekt mit den zu aktualisierenden Werten. */
     readonly verein: FussballvereinUpdate;
-    /** Versionsnummer für die zu aktualisierenden Werte. */
     readonly version: string;
 };
 
 type FussballvereinUpdated = Prisma.FussballvereinGetPayload<{}>;
 
-// snake_case-Typen aus Prisma
 type LogoFileCreate = Prisma.LogoFileUncheckedCreateInput;
 export type LogoFileCreated = Prisma.LogoFileGetPayload<{}>;
 
@@ -68,7 +64,6 @@ export type LogoFileCreated = Prisma.LogoFileGetPayload<{}>;
  */
 @Injectable()
 export class FussballvereinWriteService {
-    // z.B. `"0"`, `"1"`, ... wie im Vorbild
     private static readonly VERSION_PATTERN = /^"\d{1,3}"/u;
 
     readonly #prisma: PrismaClient;
@@ -77,7 +72,6 @@ export class FussballvereinWriteService {
 
     readonly #logger = getLogger(FussballvereinWriteService.name);
 
-    // eslint-disable-next-line max-params
     constructor(
         prisma: PrismaService,
         readService: FussballvereinService,
@@ -103,7 +97,7 @@ export class FussballvereinWriteService {
         await this.#prisma.$transaction(async (tx) => {
             vereinDb = await tx.fussballverein.create({
                 data: verein,
-                include: { spieler: true, stadion: true, logoFile: true }, // snake_case!
+                include: { spieler: true, stadion: true, logoFile: true },
             });
         });
 
@@ -142,7 +136,6 @@ export class FussballvereinWriteService {
 
         let logoCreated: LogoFileCreated | undefined;
         await this.#prisma.$transaction(async (tx) => {
-            // Verein ermitteln, falls vorhanden
             const verein = await tx.fussballverein.findUnique({
                 where: { id: fussballvereinId },
             });
@@ -156,9 +149,8 @@ export class FussballvereinWriteService {
                 );
             }
 
-            // evtl. vorhandene Datei löschen (1:1)
             await tx.logoFile.deleteMany({
-                where: { fussballvereinId: fussballvereinId }, // <-- snake_case
+                where: { fussballvereinId: fussballvereinId },
             });
 
             const fileType = await fileTypeFromBuffer(data);
@@ -169,7 +161,7 @@ export class FussballvereinWriteService {
                 filename,
                 data: Buffer.from(data),
                 mimetype,
-                fussballvereinId: fussballvereinId, // <-- snake_case
+                fussballvereinId: fussballvereinId,
             };
             logoCreated = await tx.logoFile.create({ data: logo });
         });
@@ -210,7 +202,6 @@ export class FussballvereinWriteService {
 
         await this.#validateUpdate(id, version);
 
-        // Optimistic Locking: version += 1
         verein.version = { increment: 1 };
 
         let vereinUpdated: FussballvereinUpdated | undefined;
@@ -290,10 +281,8 @@ export class FussballvereinWriteService {
             throw new VersionInvalidException(versionStr);
         }
 
-        // versionStr ist z.B. '"0"' => Zahl extrahieren
         const version = Number.parseInt(versionStr.slice(1, -1), 10);
 
-        // vorhandenen Datensatz inkl. aktueller Version laden
         const vereinDb = await this.#readService.findById({ id });
 
         if (version < vereinDb.version) {

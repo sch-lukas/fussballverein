@@ -13,7 +13,7 @@ import { type Slice } from './slice.js';
 import { type Suchparameter, suchparameterNamen } from './suchparameter.js';
 import { WhereBuilder } from './where-builder.js';
 
-// --- Korrekte Typdefinitionen für Payloads ---
+// --- Typdefinitionen für Payloads ---
 export type FussballvereinMitBasis = Prisma.FussballvereinGetPayload<{}>;
 export type FussballvereinMitSpielern = Prisma.FussballvereinGetPayload<{
     include: { spieler: true };
@@ -22,13 +22,13 @@ export type FussballvereinMitStadion = Prisma.FussballvereinGetPayload<{
     include: { stadion: true };
 }>;
 export type FussballvereinMitLogo = Prisma.FussballvereinGetPayload<{
-    include: { logoFile: true }; // Korrekt: camelCase
+    include: { logoFile: true };
 }>;
 export type FussballvereinMitAllen = Prisma.FussballvereinGetPayload<{
     include: {
         spieler: true;
         stadion: true;
-        logoFile: true; // Korrekt: camelCase
+        logoFile: true;
     };
 }>;
 
@@ -45,10 +45,9 @@ export class FussballvereinService {
     readonly #prisma: PrismaClient;
     readonly #whereBuilder: WhereBuilder;
 
-    // --- Korrekte Include-Objekte ---
     readonly #includeSpieler = { spieler: true } as const;
     readonly #includeStadion = { stadion: true } as const;
-    readonly #includeLogo = { logoFile: true } as const; // Korrekt: camelCase
+    readonly #includeLogo = { logoFile: true } as const;
 
     readonly #logger = getLogger(FussballvereinService.name);
 
@@ -74,10 +73,10 @@ export class FussballvereinService {
             mitLogo,
         );
 
-        const include: any = {}; // any, um dynamische Zuweisung zu erlauben
+        const include: any = {};
         if (mitSpielern) Object.assign(include, this.#includeSpieler);
         if (mitStadion) Object.assign(include, this.#includeStadion);
-        if (mitLogo) Object.assign(include, this.#includeLogo); // Nutzt das korrekte Objekt
+        if (mitLogo) Object.assign(include, this.#includeLogo);
 
         const verein = await this.#prisma.fussballverein.findUnique({
             where: { id },
@@ -102,7 +101,7 @@ export class FussballvereinService {
         const vereinWithLogo = await this.#prisma.fussballverein.findUnique({
             where: { id },
             include: {
-                logoFile: true, // Lädt die korrekte Relation
+                logoFile: true,
             },
         });
 
@@ -160,8 +159,6 @@ export class FussballvereinService {
             where,
             skip: number * size,
             take: size,
-            // Optional: Standard-Sortierung
-            // orderBy: { id: 'asc' },
         });
 
         if (vereine.length === 0) {
@@ -170,7 +167,6 @@ export class FussballvereinService {
             );
         }
 
-        // Gesamtzahl für Paginierung ermitteln
         const totalElements = await this.count(suchparameter);
         return this.#createSlice(vereine, totalElements);
     }
@@ -186,7 +182,7 @@ export class FussballvereinService {
         return count;
     }
 
-    // --- Private Hilfsmethoden (genau wie im Original) ---
+    // --- Private Hilfsmethoden ---
 
     async #findAll(
         pageable: Pageable,
@@ -196,14 +192,13 @@ export class FussballvereinService {
         const vereine = await this.#prisma.fussballverein.findMany({
             skip: number * size,
             take: size,
-            // orderBy: { id: 'asc' },
         });
 
         if (vereine.length === 0) {
             throw new NotFoundException(`Ungueltige Seite "${number}"`);
         }
 
-        const totalElements = await this.count(); // Zählt alle Elemente
+        const totalElements = await this.count();
         return this.#createSlice(vereine, totalElements);
     }
 
@@ -236,7 +231,6 @@ export class FussballvereinService {
     }
 
     #checkEnums(): boolean {
-        // Hier könnten Prüfungen für Enum-Werte stehen, falls du welche hättest
         this.#logger.debug('#checkEnums: keine Enum-Pruefungen erforderlich');
         return true;
     }

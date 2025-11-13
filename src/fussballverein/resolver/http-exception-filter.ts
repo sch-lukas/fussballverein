@@ -33,7 +33,6 @@ export class HttpExceptionFilter implements ExceptionFilter {
             throw new BadUserInputError(response, exception);
         }
 
-        // Typ "object", default: mit den Properties statusCode und message
         const { message } = response as { message: string };
         throw new BadUserInputError(message, exception);
     }

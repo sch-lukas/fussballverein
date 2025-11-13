@@ -73,6 +73,7 @@ describe('PUT /rest/fussballvereine/:id', () => {
             headers: { [AUTHORIZATION]: `${BEARER} ${tokenUser}` },
         });
         const currentETag = initialResponse.headers.get('ETag');
+
         expect(currentETag).toBeDefined();
 
         const headers = new Headers();
@@ -94,6 +95,7 @@ describe('PUT /rest/fussballvereine/:id', () => {
 
         // Pruefe, ob der ETag-Header mit der neuen Version zurueckgegeben wurde
         const newETag = response.headers.get('ETag');
+
         expect(newETag).toBeDefined();
 
         // Prueft, ob die Version inkrementiert wurde (z.B. "1" -> "2")
@@ -101,6 +103,7 @@ describe('PUT /rest/fussballvereine/:id', () => {
             currentETag?.slice(1, -1) ?? '0',
         );
         const newVersion = Number.parseInt(newETag?.slice(1, -1) ?? '0');
+
         expect(newVersion).toBe(currentVersion + 1);
     });
 
@@ -186,6 +189,7 @@ describe('PUT /rest/fussballvereine/:id', () => {
 
         const body = await response.text();
         // Pruefe den erwarteten Body-Text vom Controller
+
         expect(body).toBe(`Header "${IF_MATCH}" fehlt`);
     });
 

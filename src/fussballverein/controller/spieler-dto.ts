@@ -29,8 +29,8 @@ export class SpielerDto {
     readonly nachname!: string;
 
     @IsInt()
-    @Min(16) // Mindestalter für einen Profispieler (Annahme)
-    @Max(60) // Höchstalter (Annahme)
+    @Min(16)
+    @Max(60)
     @IsOptional()
     @ApiProperty({ example: 22, type: Number, minimum: 16, maximum: 60 })
     readonly alter?: number;
